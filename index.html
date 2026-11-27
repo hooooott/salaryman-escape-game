@@ -90,7 +90,7 @@ const levels={
  moving:[],vents:[],hazards:[]
 },
 2:{
- name:"次のエリアへ進め！",world:4800,
+ name:"4階から1階へ脱出！",world:4800,
  ground:[[0,540],[650,1120],[1230,1740],[1850,2380],[2490,3020],[3130,3660],[3770,4290],[4400,4800]],
  holes:[[540,110],[1120,110],[1740,110],[2380,110],[3020,110],[3660,110],[4290,110]],
  platforms:[
@@ -126,7 +126,7 @@ const levels={
  vents:[],hazards:[]
 },
 3:{
- name:"強敵エリアを突破せよ！",world:5500,
+ name:"課長フロアから脱出！",world:5500,
  ground:[[0,480],[590,1050],[1160,1600],[1710,2200],[2310,2780],[2890,3370],[3480,3970],[4080,4560],[4670,5500]],
  holes:[[480,110],[1050,110],[1600,110],[2200,110],[2780,110],[3370,110],[3970,110],[4560,110]],
  platforms:[
@@ -169,221 +169,34 @@ const levels={
  hazards:[],
  vents:[]
 },
- rect(sx+20,y+23,7,17,"#9e3434");
- rect(sx+16,y+13,14,10,"#e6b48d");
- rect(sx+9,y+1,29,19,"#e8bd98");
- rect(sx+7,y-2,32,8,"#34302f");
- rect(sx+7,y+2,6,9,"#34302f");
- rect(sx+14,y+8,4,3,"#242020");rect(sx+29,y+8,4,3,"#242020");
- rect(sx+1,y+24,8,19,"#25334c");rect(sx+39,y+24,8,19,"#25334c");
- rect(sx-1,y+41,10,5,"#e6b48d");rect(sx+39,y+41,10,5,"#e6b48d");
- text("課長",sx+23,y-9,12,"#26334d","center");
-}
-function drawBucho(b){
- const sx=b.x-camera,y=b.y;
- ctx.save();
- ctx.translate(sx+25,y+25);
- ctx.rotate(Math.sin(frame*.08)*.08);
- rect(-18,4,12,15,"#263247");rect(6,4,12,15,"#263247");
- rect(-23,17,15,5,"#171d2b");rect(8,17,15,5,"#171d2b");
- rect(-23,-15,46,27,"#242d43");
- rect(-4,-14,8,24,"#e9e7df");rect(-4,-12,8,15,"#9e3434");
- rect(-7,-24,14,10,"#e6b48d");
- rect(-16,-40,32,21,"#e8bd98");
- rect(-18,-43,36,8,"#34302f");
- rect(-18,-39,7,11,"#34302f");
- rect(-10,-33,4,3,"#242020");rect(6,-33,4,3,"#242020");
- rect(-30,-13,9,19,"#242d43");rect(21,-13,9,19,"#242d43");
- rect(-32,3,11,5,"#e6b48d");rect(21,3,11,5,"#e6b48d");
- ctx.restore();
- text("部長",sx+25,y-20,14,"#8d2020","center");
-}
-function drawBosses(){
- bosses.forEach(b=>{
-  if(!b.alive)return;
-  if(b.type==="otsubone")drawOtsubone(b);
-  else if(b.type==="kacho")drawKacho(b);
-  else if(b.type==="bucho")drawBucho(b);
-  else drawPerson(b.x,FLOOR-60,b.v>0?1:-1,true);
- });
-}
-function drawTeas(){
- teas.forEach(t=>{
-  const x=t.x-camera;
-  ctx.fillStyle="#b65b32";ctx.beginPath();ctx.arc(x,t.y,8,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#fff0d7";ctx.beginPath();ctx.arc(x-2,t.y-2,3,0,Math.PI*2);ctx.fill();
-  rect(x-7,t.y-10,14,3,"#fff0d7");
- });
-}
-function drawPlayer(){
- if(player.inv>0&&Math.floor(frame/5)%2===0)return;
- const x=player.x-camera,y=player.y;
- rect(x+4,y+49,24,5,"#0004");
- rect(x+7,y+39,7,13,"#29364a");rect(x+19,y+39,7,13,"#29364a");
- rect(x+3,y+49,12,5,"#1b2534");rect(x+18,y+49,13,5,"#1b2534");
- rect(x+4,y+20,25,23,"#294e7c");
- rect(x+14,y+21,5,19,"#f2eee4");rect(x+14,y+23,5,14,"#d33e3e");
- rect(x+12,y+15,9,7,"#efbd91");rect(x+7,y+2,21,18,"#f1c49a");
- rect(x+6,y,22,6,"#302b2a");rect(x+5,y+3,5,6,"#302b2a");
- rect(x+(player.face>0?21:9),y+9,3,3,"#252525");
- rect(x,y+23,6,17,"#294e7c");rect(x+28,y+23,6,17,"#294e7c");
- rect(x-1,y+38,7,5,"#efbd91");rect(x+28,y+38,7,5,"#efbd91");
-}
-function draw(){
- ctx.clearRect(0,0,W,H);
- drawBackground();
- drawHole();
- drawPlatform();
- drawProps();
- drawCoins();
- drawBosses();
- drawTeas();
- drawPlayer();
- if(state==="playing"){
-  // 画面右端にゴールの目印
-  if(player.x>WORLD-650){
-   const gx=WORLD-100-camera;
-   rect(gx,300,8,140,"#f5f5f5");
-   rect(gx+8,300,65,38,"#d94b43");
-   text("EXIT",gx+40,326,18,"#fff","center");
-  }
- }
-}
-function overlap(a,b){
- return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
-}
-function bossNear(x){return bosses.some(b=>b.alive&&Math.abs(b.x-x)<105)}
-function findSafeRespawnX(failedX){
- const preferred=Math.max(45,failedX-180),candidates=[];
- ground.forEach(g=>{
-  const left=g.x+55,right=g.x+g.w-65;
-  const x=Math.min(right,Math.max(left,preferred));
-  if(x<=failedX-35&&!bossNear(x))candidates.push({x,d:Math.abs(x-preferred)});
- });
- candidates.sort((a,b)=>a.d-b.d);
- if(candidates.length)return candidates[0].x;
- for(let i=ground.length-1;i>=0;i--){
-  const g=ground[i],x=Math.min(g.x+g.w-90,failedX-220);
-  if(x>=g.x+55&&!bossNear(x))return x;
- }
- return 55;
-}
-function hurt(){
- if(player.inv>0||state!=="playing")return;
- lives--;hud();
- if(lives<=0){endGame(false);return}
- const safeX=findSafeRespawnX(player.x);
- player.x=safeX;player.y=FLOOR-player.h;
- player.vx=0;player.vy=0;player.onGround=true;player.inv=120;
- teas=[];
- camera=Math.max(0,Math.min(WORLD-W,player.x-365));
-}
-function updateMovingPlatforms(){
- movingPlatforms.forEach(p=>{
-  p.oldY=p.y;
-  p.y=p.baseY+Math.sin(frame*p.speed+p.phase)*p.range;
- });
-}
-function updateTeas(){
- for(let i=teas.length-1;i>=0;i--){
-  const t=teas[i];
-  t.x+=t.vx;t.y+=t.vy;if(!t.radial)t.vy+=.12;t.life--;
-  if(t.life<=0||t.x<camera-100||t.x>camera+W+100){teas.splice(i,1);continue}
-  const teaBox={x:t.x-8,y:t.y-8,w:16,h:16};
-  const playerBox={x:player.x+3,y:player.y+3,w:player.w-6,h:player.h-6};
-  if(player.inv<=0&&overlap(teaBox,playerBox)){
-   hurt();
-   teas.splice(i,1);
-   if(state!=="playing")return;
-   // hurt() clears the projectile array during respawn; stop this pass safely.
-   if(player.inv>0)return;
-  }
- }
-}
-function updateBoss(b,oldY){
- if(!b.alive)return;
- if(b.type==="bucho"){
-  b.x+=b.v;
-  if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
-  if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
-  b.y=b.baseY+Math.sin(frame*.075+(b.phase||0))*b.rangeY;
-  b.shotTimer--;
-  if(b.shotTimer<=0&&Math.abs(player.x-b.x)<760){
-   // 8方向へ同時発射。近づくほど避けにくい部長の全方位攻撃
-   for(let a=0;a<8;a++){
-    const angle=a*Math.PI/4;
-    teas.push({x:b.x+25,y:b.y+20,vx:Math.cos(angle)*3.35,vy:Math.sin(angle)*3.35,life:175,radial:true});
-   }
-   b.shotTimer=b.shot||95;
-  }
-  const enemy={x:b.x-2,y:b.y-2,w:54,h:58};
-  const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
-  if(player.inv<=0&&overlap(box,enemy)){
-   if(player.vy>0&&oldY+player.h<=enemy.y+22){
-    b.alive=false;player.y=enemy.y-player.h;player.vy=-9;
-    player.onGround=false;score+=250;hud();
-   }else hurt();
-  }
-  return;
- }
- if(b.type==="kacho"){
-  if(!b.jumping){
-   b.x+=b.v;
-   if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
-   if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
-   b.jumpCooldown--;
-   if(b.jumpCooldown<=0&&Math.abs(player.x-b.x)<650){
-    b.jumping=true;
-    b.vy=-12.5;
-    b.jumpVx=player.x<b.x?-2.8:2.8;
-    b.jumpCooldown=105;
-   }
-  }else{
-   b.x+=b.jumpVx;
-   b.vy+=.48;
-   b.y+=b.vy;
-   if(b.x<b.min)b.x=b.min;
-   if(b.x>b.max)b.x=b.max;
-   if(b.y>=FLOOR-60){
-    b.y=FLOOR-60;b.vy=0;b.jumping=false;
-   }
-  }
-  const enemy={x:b.x,y:b.y,w:46,h:62};
-  const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
-  if(player.inv<=0&&overlap(box,enemy)){
-   if(player.vy>0&&oldY+player.h<=enemy.y+25){
-    b.alive=false;player.y=enemy.y-player.h;player.vy=-9;
-    player.onGround=false;score+=100;hud();
-   }else hurt();
-  }
-  return;
- }
-
- b.x+=b.v;
- if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
- if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
-
- if(b.type==="otsubone"){
-  b.shotTimer--;
-  if(b.shotTimer<=0&&Math.abs(player.x-b.x)<620){
-   const dir=player.x<b.x?-1:1;
-   teas.push({x:b.x+15,y:FLOOR-42,vx:dir*(stage===2?4.1:4.4),vy:-1.5,life:150});
-   b.shotTimer=b.shot||110;
-  }
- }
-
- const enemy=b.type==="otsubone"
-  ?{x:b.x,y:FLOOR-66,w:42,h:66}
-  :{x:b.x+2,y:FLOOR-57,w:32,h:57};
- const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
- if(player.inv<=0&&overlap(box,enemy)){
-  if(player.vy>0&&oldY+player.h<=enemy.y+24){
-   b.alive=false;player.y=enemy.y-player.h;
-   player.vy=-8;player.onGround=false;score+=30;hud();
-  }else hurt();
- }
-}
-
+4:{
+ name:"部長フロアから最終脱出！",world:6500,
+ ground:[[0,430],[550,980],[1100,1510],[1640,2040],[2170,2570],[2700,3100],[3230,3650],[3780,4180],[4310,4720],[4850,5270],[5400,6500]],
+ holes:[[430,120],[980,120],[1510,130],[2040,130],[2570,130],[3100,130],[3650,130],[4180,130],[4720,130],[5270,130]],
+ platforms:[
+  [250,345,100],[470,300,95],[700,330,110],
+  [870,290,100],[1130,320,100],[1390,275,110],
+  [1600,305,100],[1840,265,110],[2100,310,100],
+  [2350,270,110],[2630,305,100],[2880,260,110],
+  [3160,300,100],[3410,255,110],[3700,300,100],
+  [3950,255,110],[4230,295,100],[4470,250,110],
+  [4770,295,100],[5010,250,110],[5300,300,100],
+  [5570,270,120],[5900,320,130],[6200,300,120]
+ ],
+ bosses:[
+  {x:190,min:130,max:360,v:1.65,type:"senpai"},
+  {x:690,min:590,max:880,v:1.85,type:"otsubone",shot:88},
+  {x:1190,min:1130,max:1430,v:1.9,type:"kacho",jumpCooldown:68},
+  {x:1740,min:1680,max:1960,v:2.0,type:"senpai"},
+  {x:2260,min:2200,max:2500,v:2.0,type:"otsubone",shot:78},
+  {x:2790,min:2740,max:3020,v:2.1,type:"kacho",jumpCooldown:58},
+  {x:3330,min:3270,max:3570,v:2.1,type:"senpai"},
+  {x:3890,min:3820,max:4110,v:2.15,type:"otsubone",shot:70},
+  {x:4430,min:4360,max:4660,v:2.2,type:"kacho",jumpCooldown:52},
+  {x:5000,min:4920,max:5200,v:2.25,type:"senpai"},
+  {x:5750,min:5550,max:6250,v:2.0,type:"bucho",shot:95,baseY:285,rangeY:72,phase:0}
+ ],
+ coins:[[120,385],[300,285],[500,385],[740,275],[910,245],[1160,385],[1390,235],[1690,385],[1880,225],[2130,385],[2380,230],[2650,385],[2910,220],[3180,385],[3440,215],[3710,385],[3980,215],[4250,385],[4500,210],[4780,385],[5040,215],[5320,385],[5590,230],[5840,230],[6120,260],[6380,385]],
  props:[[80,"box"],[390,"copier"],[810,"desk"],[1250,"chair"],[1750,"copier"],[2200,"box"],[2750,"desk"],[3300,"copier"],[3850,"chair"],[4400,"desk"],[4950,"copier"],[5500,"box"],[6100,"desk"]],
  moving:[
   {x:430,y:330,w:78,baseY:330,range:75,speed:.07,phase:0},
@@ -425,6 +238,12 @@ function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math
 function line(x1,y1,x2,y2,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
 function text(s,x,y,size,color="#222",align="left"){ctx.font=`bold ${size}px sans-serif`;ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(s,x,y)}
 
+function stage2FloorAt(x){
+ if(x<1200)return 4;
+ if(x<2400)return 3;
+ if(x<3600)return 2;
+ return 1;
+}
 
 function poster(x,y,w,h,heading,lines,color){
  const sx=x-camera;rect(sx+5,y+5,w,h,"#756c5e");rect(sx,y,w,h,"#fffdf4");
@@ -466,16 +285,17 @@ function drawBackground(){
    rect(wx+10,190,290,10,"#687889");
   }
   rect(0,205,W,9,"#8997a5");rect(0,214,W,7,"#e6e9eb");
+  const floorNum=stage2FloorAt(camera+W/2);
   rect(20,228,100,42,"#34495e");rect(25,233,90,32,"#eaf1f4");
-  text("GO!",70,256,23,"#34495e","center");
+  text(floorNum+" F",70,256,23,"#34495e","center");
   for(let x=450;x<W+250;x+=620){
    const sx=x-(camera%620);rect(sx,275,100,8,"#8b9298");
    for(let i=0;i<5;i++)rect(sx+8+i*17,283+i*12,20,7,"#8b9298");
    rect(sx+3,265,4,25,"#65727d");rect(sx+91,265,4,25,"#65727d");
   }
-  poster(220,245,150,115,"社内掲示",["出口を目指せ！"],"#456d91");
-  poster(1780,245,160,115,"連絡事項",["前へ進め！"],"#557b55");
-  poster(3300,245,160,115,"あと少し！",["出口はもうすぐ"],"#a45b43");
+  poster(220,245,150,115,"4階フロア",["出口は1階！"],"#456d91");
+  poster(1780,245,160,115,"階段はこちら",["下へ進め！"],"#557b55");
+  poster(3300,245,160,115,"1階まで",["あと少し！"],"#a45b43");
  }else if(stage===3){
   g.addColorStop(0,"#c9c8dc");g.addColorStop(1,"#777b91");
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);rect(0,0,W,420,"#777b91");
@@ -488,11 +308,11 @@ function drawBackground(){
    rect(wx+8,193,273,12,"#31394d");
   }
   rect(0,205,W,10,"#424b61");rect(0,215,W,7,"#d3d5df");
-  poster(180,245,155,115,"重要エリア",["最後の関門！"],"#8d4352");
-  poster(2050,245,165,115,"社内通達",["油断するな！"],"#5d4a81");
-  poster(3900,245,160,115,"最終エリア",["出口まであと少し"],"#8d4352");
+  poster(180,245,155,115,"課長室",["最後の関門！"],"#8d4352");
+  poster(2050,245,165,115,"社内通達",["課長に逆らうな"],"#5d4a81");
+  poster(3900,245,160,115,"最終フロア",["出口まであと少し"],"#8d4352");
   rect(20,228,115,42,"#273149");rect(25,233,105,32,"#e8e4ee");
-  text("STAGE 3",77,255,16,"#493b61","center");
+  text("BOSS AREA",77,255,16,"#493b61","center");
  }else{
   g.addColorStop(0,"#f3d7a5");g.addColorStop(1,"#a85e45");
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);rect(0,0,W,420,"#765044");
@@ -502,11 +322,11 @@ function drawBackground(){
    rect(wx+8,193,288,12,"#34242c");
   }
   rect(0,205,W,10,"#4b3036");rect(0,215,W,7,"#e7c79d");
-  poster(170,245,170,115,"最終エリア",["四方八方から攻撃！"],"#a33d32");
+  poster(170,245,170,115,"部長フロア",["四方八方から攻撃！"],"#a33d32");
   poster(2500,245,175,115,"緊急通達",["部長に見つかるな"],"#784b2d");
   poster(4700,245,175,115,"最終出口",["右奥まで走れ！"],"#a33d32");
   rect(20,228,115,42,"#492d36");rect(25,233,105,32,"#f7e6cf");
-  text("STAGE 4",77,255,15,"#713a32","center");
+  text("EXECUTIVE",77,255,15,"#713a32","center");
  }
  rect(0,FLOOR, W,100,stage===1?"#a8a08c":stage===2?"#858d98":stage===3?"#666b7c":"#8b6251");
  rect(0,FLOOR,W,9,stage===1?"#766e60":stage===2?"#515b69":stage===3?"#3e4557":"#563b34");
@@ -605,7 +425,6 @@ function drawKacho(b){
  rect(sx+4,y+57,17,5,"#171d2b");rect(sx+25,y+57,18,5,"#171d2b");
  rect(sx+4,y+20,39,29,"#25334c");
  rect(sx+20,y+21,7,25,"#e9e7df");
-
  rect(sx+20,y+23,7,17,"#9b343d");
  rect(sx+18,y+15,12,8,"#e5ad83");
  rect(sx+10,y+1,29,20,"#edc49f");
@@ -720,14 +539,13 @@ function updateTeas(){
   const playerBox={x:player.x+3,y:player.y+3,w:player.w-6,h:player.h-6};
   if(player.inv<=0&&overlap(teaBox,playerBox)){
    hurt();
-   teas.splice(i,1);
    if(state!=="playing")return;
-   // hurt() clears the projectile array during respawn; stop this pass safely.
+   // hurt() clears the projectile array when the player respawns.
    if(player.inv>0)return;
+   teas.splice(i,1);
   }
  }
 }
-
 function updateBoss(b,oldY){
  if(!b.alive)return;
  if(b.type==="bucho"){
@@ -875,9 +693,7 @@ function update(){
   if(Math.hypot(dx,dy)<30){c.taken=true;coinCount++;score+=10;hud()}
  });
 
- bosses.forEach(b=>{
-  if(state==="playing")updateBoss(b,oldY);
- });
+ bosses.forEach(b=>{if(state==="playing")updateBoss(b,oldY)});
  if(state!=="playing")return;
  updateTeas();
  if(state!=="playing")return;
@@ -903,19 +719,19 @@ function endGame(cleared){
   return;
  }
  if(stage===1){
-  showPanel(`<h1>STAGE 1 CLEAR！</h1><p>オフィスから脱出成功！<br>しかし、まだ自由ではない……。<br><br>次のステージへ進もう！</p><button class="mainBtn" id="nextBtn">ステージ2へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ1をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 1 CLEAR！</h1><p>オフィスから脱出成功！<br>しかし、まだ自由ではない……。<br><br>次は4階から1階へ脱出だ！</p><button class="mainBtn" id="nextBtn">ステージ2へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ1をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(2);
   document.getElementById("againBtn").onclick=()=>startStage(1);
  }else if(stage===2){
-  showPanel(`<h1>STAGE 2 CLEAR！</h1><p>ステージ2を突破！<br>しかし、さらに強い敵が待ち受けている……。<br><br>次のステージへ進もう！</p><button class="mainBtn" id="nextBtn">ステージ3へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ2をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 2 CLEAR！</h1><p>4階から1階まで脱出成功！<br>しかし、最後に待ち受けるのは課長だ……。<br><br>次は課長フロアへ！</p><button class="mainBtn" id="nextBtn">ステージ3へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ2をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(3);
   document.getElementById("againBtn").onclick=()=>startStage(2);
  }else if(stage===3){
-  showPanel(`<h1>STAGE 3 CLEAR！</h1><p>ステージ3を突破！<br>だが最後には最強の敵が待ち受けている……。<br><br>最難関ステージ4へ！</p><button class="mainBtn" id="nextBtn">ステージ4へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ3をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 3 CLEAR！</h1><p>課長フロアを突破！<br>だが最上階には部長が待ち受けている……。<br><br>最難関ステージ4へ！</p><button class="mainBtn" id="nextBtn">ステージ4へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ3をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(4);
   document.getElementById("againBtn").onclick=()=>startStage(3);
  }else{
-  showPanel(`<h1>ALL STAGE CLEAR！！</h1><p>最難関ステージを突破！<br>先輩・お局さん・課長・部長を全員撃退！<br>ついに会社から完全脱出！！<br><br>最終スコア：${score}<br>コイン：${coinCount}枚</p><button class="mainBtn" id="againBtn">最初から遊ぶ！</button><div class="small">全4ステージクリアおめでとう！</div>`);
+  showPanel(`<h1>ALL STAGE CLEAR！！</h1><p>最難関の部長フロアを突破！<br>先輩・お局さん・課長・部長を全員撃退！<br>ついに会社から完全脱出！！<br><br>最終スコア：${score}<br>コイン：${coinCount}枚</p><button class="mainBtn" id="againBtn">最初から遊ぶ！</button><div class="small">全4ステージクリアおめでとう！</div>`);
   document.getElementById("againBtn").onclick=()=>startStage(1);
  }
 }
