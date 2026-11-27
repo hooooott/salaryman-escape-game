@@ -169,34 +169,221 @@ const levels={
  hazards:[],
  vents:[]
 },
-4:{
- name:"最終エリアから脱出せよ！",world:6500,
- ground:[[0,430],[550,980],[1100,1510],[1640,2040],[2170,2570],[2700,3100],[3230,3650],[3780,4180],[4310,4720],[4850,5270],[5400,6500]],
- holes:[[430,120],[980,120],[1510,130],[2040,130],[2570,130],[3100,130],[3650,130],[4180,130],[4720,130],[5270,130]],
- platforms:[
-  [250,345,100],[470,300,95],[700,330,110],
-  [870,290,100],[1130,320,100],[1390,275,110],
-  [1600,305,100],[1840,265,110],[2100,310,100],
-  [2350,270,110],[2630,305,100],[2880,260,110],
-  [3160,300,100],[3410,255,110],[3700,300,100],
-  [3950,255,110],[4230,295,100],[4470,250,110],
-  [4770,295,100],[5010,250,110],[5300,300,100],
-  [5570,270,120],[5900,320,130],[6200,300,120]
- ],
- bosses:[
-  {x:190,min:130,max:360,v:1.65,type:"senpai"},
-  {x:690,min:590,max:880,v:1.85,type:"otsubone",shot:88},
-  {x:1190,min:1130,max:1430,v:1.9,type:"kacho",jumpCooldown:68},
-  {x:1740,min:1680,max:1960,v:2.0,type:"senpai"},
-  {x:2260,min:2200,max:2500,v:2.0,type:"otsubone",shot:78},
-  {x:2790,min:2740,max:3020,v:2.1,type:"kacho",jumpCooldown:58},
-  {x:3330,min:3270,max:3570,v:2.1,type:"senpai"},
-  {x:3890,min:3820,max:4110,v:2.15,type:"otsubone",shot:70},
-  {x:4430,min:4360,max:4660,v:2.2,type:"kacho",jumpCooldown:52},
-  {x:5000,min:4920,max:5200,v:2.25,type:"senpai"},
-  {x:5750,min:5550,max:6250,v:2.0,type:"bucho",shot:95,baseY:285,rangeY:72,phase:0}
- ],
- coins:[[120,385],[300,285],[500,385],[740,275],[910,245],[1160,385],[1390,235],[1690,385],[1880,225],[2130,385],[2380,230],[2650,385],[2910,220],[3180,385],[3440,215],[3710,385],[3980,215],[4250,385],[4500,210],[4780,385],[5040,215],[5320,385],[5590,230],[5840,230],[6120,260],[6380,385]],
+ rect(sx+20,y+23,7,17,"#9e3434");
+ rect(sx+16,y+13,14,10,"#e6b48d");
+ rect(sx+9,y+1,29,19,"#e8bd98");
+ rect(sx+7,y-2,32,8,"#34302f");
+ rect(sx+7,y+2,6,9,"#34302f");
+ rect(sx+14,y+8,4,3,"#242020");rect(sx+29,y+8,4,3,"#242020");
+ rect(sx+1,y+24,8,19,"#25334c");rect(sx+39,y+24,8,19,"#25334c");
+ rect(sx-1,y+41,10,5,"#e6b48d");rect(sx+39,y+41,10,5,"#e6b48d");
+ text("課長",sx+23,y-9,12,"#26334d","center");
+}
+function drawBucho(b){
+ const sx=b.x-camera,y=b.y;
+ ctx.save();
+ ctx.translate(sx+25,y+25);
+ ctx.rotate(Math.sin(frame*.08)*.08);
+ rect(-18,4,12,15,"#263247");rect(6,4,12,15,"#263247");
+ rect(-23,17,15,5,"#171d2b");rect(8,17,15,5,"#171d2b");
+ rect(-23,-15,46,27,"#242d43");
+ rect(-4,-14,8,24,"#e9e7df");rect(-4,-12,8,15,"#9e3434");
+ rect(-7,-24,14,10,"#e6b48d");
+ rect(-16,-40,32,21,"#e8bd98");
+ rect(-18,-43,36,8,"#34302f");
+ rect(-18,-39,7,11,"#34302f");
+ rect(-10,-33,4,3,"#242020");rect(6,-33,4,3,"#242020");
+ rect(-30,-13,9,19,"#242d43");rect(21,-13,9,19,"#242d43");
+ rect(-32,3,11,5,"#e6b48d");rect(21,3,11,5,"#e6b48d");
+ ctx.restore();
+ text("部長",sx+25,y-20,14,"#8d2020","center");
+}
+function drawBosses(){
+ bosses.forEach(b=>{
+  if(!b.alive)return;
+  if(b.type==="otsubone")drawOtsubone(b);
+  else if(b.type==="kacho")drawKacho(b);
+  else if(b.type==="bucho")drawBucho(b);
+  else drawPerson(b.x,FLOOR-60,b.v>0?1:-1,true);
+ });
+}
+function drawTeas(){
+ teas.forEach(t=>{
+  const x=t.x-camera;
+  ctx.fillStyle="#b65b32";ctx.beginPath();ctx.arc(x,t.y,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fff0d7";ctx.beginPath();ctx.arc(x-2,t.y-2,3,0,Math.PI*2);ctx.fill();
+  rect(x-7,t.y-10,14,3,"#fff0d7");
+ });
+}
+function drawPlayer(){
+ if(player.inv>0&&Math.floor(frame/5)%2===0)return;
+ const x=player.x-camera,y=player.y;
+ rect(x+4,y+49,24,5,"#0004");
+ rect(x+7,y+39,7,13,"#29364a");rect(x+19,y+39,7,13,"#29364a");
+ rect(x+3,y+49,12,5,"#1b2534");rect(x+18,y+49,13,5,"#1b2534");
+ rect(x+4,y+20,25,23,"#294e7c");
+ rect(x+14,y+21,5,19,"#f2eee4");rect(x+14,y+23,5,14,"#d33e3e");
+ rect(x+12,y+15,9,7,"#efbd91");rect(x+7,y+2,21,18,"#f1c49a");
+ rect(x+6,y,22,6,"#302b2a");rect(x+5,y+3,5,6,"#302b2a");
+ rect(x+(player.face>0?21:9),y+9,3,3,"#252525");
+ rect(x,y+23,6,17,"#294e7c");rect(x+28,y+23,6,17,"#294e7c");
+ rect(x-1,y+38,7,5,"#efbd91");rect(x+28,y+38,7,5,"#efbd91");
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ drawBackground();
+ drawHole();
+ drawPlatform();
+ drawProps();
+ drawCoins();
+ drawBosses();
+ drawTeas();
+ drawPlayer();
+ if(state==="playing"){
+  // 画面右端にゴールの目印
+  if(player.x>WORLD-650){
+   const gx=WORLD-100-camera;
+   rect(gx,300,8,140,"#f5f5f5");
+   rect(gx+8,300,65,38,"#d94b43");
+   text("EXIT",gx+40,326,18,"#fff","center");
+  }
+ }
+}
+function overlap(a,b){
+ return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+}
+function bossNear(x){return bosses.some(b=>b.alive&&Math.abs(b.x-x)<105)}
+function findSafeRespawnX(failedX){
+ const preferred=Math.max(45,failedX-180),candidates=[];
+ ground.forEach(g=>{
+  const left=g.x+55,right=g.x+g.w-65;
+  const x=Math.min(right,Math.max(left,preferred));
+  if(x<=failedX-35&&!bossNear(x))candidates.push({x,d:Math.abs(x-preferred)});
+ });
+ candidates.sort((a,b)=>a.d-b.d);
+ if(candidates.length)return candidates[0].x;
+ for(let i=ground.length-1;i>=0;i--){
+  const g=ground[i],x=Math.min(g.x+g.w-90,failedX-220);
+  if(x>=g.x+55&&!bossNear(x))return x;
+ }
+ return 55;
+}
+function hurt(){
+ if(player.inv>0||state!=="playing")return;
+ lives--;hud();
+ if(lives<=0){endGame(false);return}
+ const safeX=findSafeRespawnX(player.x);
+ player.x=safeX;player.y=FLOOR-player.h;
+ player.vx=0;player.vy=0;player.onGround=true;player.inv=120;
+ teas=[];
+ camera=Math.max(0,Math.min(WORLD-W,player.x-365));
+}
+function updateMovingPlatforms(){
+ movingPlatforms.forEach(p=>{
+  p.oldY=p.y;
+  p.y=p.baseY+Math.sin(frame*p.speed+p.phase)*p.range;
+ });
+}
+function updateTeas(){
+ for(let i=teas.length-1;i>=0;i--){
+  const t=teas[i];
+  t.x+=t.vx;t.y+=t.vy;if(!t.radial)t.vy+=.12;t.life--;
+  if(t.life<=0||t.x<camera-100||t.x>camera+W+100){teas.splice(i,1);continue}
+  const teaBox={x:t.x-8,y:t.y-8,w:16,h:16};
+  const playerBox={x:player.x+3,y:player.y+3,w:player.w-6,h:player.h-6};
+  if(player.inv<=0&&overlap(teaBox,playerBox)){
+   hurt();
+   teas.splice(i,1);
+   if(state!=="playing")return;
+   // hurt() clears the projectile array during respawn; stop this pass safely.
+   if(player.inv>0)return;
+  }
+ }
+}
+function updateBoss(b,oldY){
+ if(!b.alive)return;
+ if(b.type==="bucho"){
+  b.x+=b.v;
+  if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
+  if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
+  b.y=b.baseY+Math.sin(frame*.075+(b.phase||0))*b.rangeY;
+  b.shotTimer--;
+  if(b.shotTimer<=0&&Math.abs(player.x-b.x)<760){
+   // 8方向へ同時発射。近づくほど避けにくい部長の全方位攻撃
+   for(let a=0;a<8;a++){
+    const angle=a*Math.PI/4;
+    teas.push({x:b.x+25,y:b.y+20,vx:Math.cos(angle)*3.35,vy:Math.sin(angle)*3.35,life:175,radial:true});
+   }
+   b.shotTimer=b.shot||95;
+  }
+  const enemy={x:b.x-2,y:b.y-2,w:54,h:58};
+  const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
+  if(player.inv<=0&&overlap(box,enemy)){
+   if(player.vy>0&&oldY+player.h<=enemy.y+22){
+    b.alive=false;player.y=enemy.y-player.h;player.vy=-9;
+    player.onGround=false;score+=250;hud();
+   }else hurt();
+  }
+  return;
+ }
+ if(b.type==="kacho"){
+  if(!b.jumping){
+   b.x+=b.v;
+   if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
+   if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
+   b.jumpCooldown--;
+   if(b.jumpCooldown<=0&&Math.abs(player.x-b.x)<650){
+    b.jumping=true;
+    b.vy=-12.5;
+    b.jumpVx=player.x<b.x?-2.8:2.8;
+    b.jumpCooldown=105;
+   }
+  }else{
+   b.x+=b.jumpVx;
+   b.vy+=.48;
+   b.y+=b.vy;
+   if(b.x<b.min)b.x=b.min;
+   if(b.x>b.max)b.x=b.max;
+   if(b.y>=FLOOR-60){
+    b.y=FLOOR-60;b.vy=0;b.jumping=false;
+   }
+  }
+  const enemy={x:b.x,y:b.y,w:46,h:62};
+  const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
+  if(player.inv<=0&&overlap(box,enemy)){
+   if(player.vy>0&&oldY+player.h<=enemy.y+25){
+    b.alive=false;player.y=enemy.y-player.h;player.vy=-9;
+    player.onGround=false;score+=100;hud();
+   }else hurt();
+  }
+  return;
+ }
+
+ b.x+=b.v;
+ if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
+ if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
+
+ if(b.type==="otsubone"){
+  b.shotTimer--;
+  if(b.shotTimer<=0&&Math.abs(player.x-b.x)<620){
+   const dir=player.x<b.x?-1:1;
+   teas.push({x:b.x+15,y:FLOOR-42,vx:dir*(stage===2?4.1:4.4),vy:-1.5,life:150});
+   b.shotTimer=b.shot||110;
+  }
+ }
+
+ const enemy=b.type==="otsubone"
+  ?{x:b.x,y:FLOOR-66,w:42,h:66}
+  :{x:b.x+2,y:FLOOR-57,w:32,h:57};
+ const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
+ if(player.inv<=0&&overlap(box,enemy)){
+  if(player.vy>0&&oldY+player.h<=enemy.y+24){
+   b.alive=false;player.y=enemy.y-player.h;
+   player.vy=-8;player.onGround=false;score+=30;hud();
+  }else hurt();
+ }
+}
+
  props:[[80,"box"],[390,"copier"],[810,"desk"],[1250,"chair"],[1750,"copier"],[2200,"box"],[2750,"desk"],[3300,"copier"],[3850,"chair"],[4400,"desk"],[4950,"copier"],[5500,"box"],[6100,"desk"]],
  moving:[
   {x:430,y:330,w:78,baseY:330,range:75,speed:.07,phase:0},
@@ -418,6 +605,7 @@ function drawKacho(b){
  rect(sx+4,y+57,17,5,"#171d2b");rect(sx+25,y+57,18,5,"#171d2b");
  rect(sx+4,y+20,39,29,"#25334c");
  rect(sx+20,y+21,7,25,"#e9e7df");
+
  rect(sx+20,y+23,7,17,"#9b343d");
  rect(sx+18,y+15,12,8,"#e5ad83");
  rect(sx+10,y+1,29,20,"#edc49f");
@@ -530,9 +718,16 @@ function updateTeas(){
   if(t.life<=0||t.x<camera-100||t.x>camera+W+100){teas.splice(i,1);continue}
   const teaBox={x:t.x-8,y:t.y-8,w:16,h:16};
   const playerBox={x:player.x+3,y:player.y+3,w:player.w-6,h:player.h-6};
-  if(overlap(teaBox,playerBox)){hurt();teas.splice(i,1)}
+  if(player.inv<=0&&overlap(teaBox,playerBox)){
+   hurt();
+   teas.splice(i,1);
+   if(state!=="playing")return;
+   // hurt() clears the projectile array during respawn; stop this pass safely.
+   if(player.inv>0)return;
+  }
  }
 }
+
 function updateBoss(b,oldY){
  if(!b.alive)return;
  if(b.type==="bucho"){
@@ -551,7 +746,7 @@ function updateBoss(b,oldY){
   }
   const enemy={x:b.x-2,y:b.y-2,w:54,h:58};
   const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
-  if(overlap(box,enemy)){
+  if(player.inv<=0&&overlap(box,enemy)){
    if(player.vy>0&&oldY+player.h<=enemy.y+22){
     b.alive=false;player.y=enemy.y-player.h;player.vy=-9;
     player.onGround=false;score+=250;hud();
@@ -583,7 +778,7 @@ function updateBoss(b,oldY){
   }
   const enemy={x:b.x,y:b.y,w:46,h:62};
   const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
-  if(overlap(box,enemy)){
+  if(player.inv<=0&&overlap(box,enemy)){
    if(player.vy>0&&oldY+player.h<=enemy.y+25){
     b.alive=false;player.y=enemy.y-player.h;player.vy=-9;
     player.onGround=false;score+=100;hud();
@@ -609,7 +804,7 @@ function updateBoss(b,oldY){
   ?{x:b.x,y:FLOOR-66,w:42,h:66}
   :{x:b.x+2,y:FLOOR-57,w:32,h:57};
  const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
- if(overlap(box,enemy)){
+ if(player.inv<=0&&overlap(box,enemy)){
   if(player.vy>0&&oldY+player.h<=enemy.y+24){
    b.alive=false;player.y=enemy.y-player.h;
    player.vy=-8;player.onGround=false;score+=30;hud();
@@ -680,10 +875,15 @@ function update(){
   if(Math.hypot(dx,dy)<30){c.taken=true;coinCount++;score+=10;hud()}
  });
 
- bosses.forEach(b=>updateBoss(b,oldY));
+ bosses.forEach(b=>{
+  if(state==="playing")updateBoss(b,oldY);
+ });
+ if(state!=="playing")return;
  updateTeas();
+ if(state!=="playing")return;
 
  if(player.y>H+40)hurt();
+ if(state!=="playing")return;
 
  camera=Math.max(0,Math.min(WORLD-W,player.x-365));
  if(player.inv>0)player.inv--;
