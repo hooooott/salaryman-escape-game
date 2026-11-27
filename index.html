@@ -69,7 +69,7 @@ const keys={left:false,right:false,jump:false};
 
 let state="title",stage=1,camera=0,score=0,coinCount=0,lives=3,frame=0,lastJump=false;
 let WORLD=4100,ground=[],platforms=[],holes=[],bosses=[],coins=[],props=[],teas=[],vents=[],movingPlatforms=[],hazards=[];
-let shacho=null,shachoAppeared=false,shachoTimer=0,energyDrink=null;
+let shacho=null,shachoAppeared=false,shachoTimer=0,energyDrink=null,stage4EnergyUsed=false;
 
 const player={x:70,y:386,w:30,h:54,vx:0,vy:0,onGround:true,inv:0,face:1};
 
@@ -149,7 +149,6 @@ const levels={
   {x:3100,min:2960,max:3300,v:1.75,type:"otsubone",shot:90},
   {x:3700,min:3560,max:3900,v:1.9,type:"senpai"},
   {x:4300,min:4160,max:4490,v:1.8,type:"otsubone",shot:85},
-  // 課長は合計3体
   {x:2200,min:2280,max:2690,v:1.8,type:"kacho",jumpCooldown:85},
   {x:3800,min:3540,max:3920,v:1.9,type:"kacho",jumpCooldown:75},
   {x:4900,min:4740,max:5200,v:1.65,type:"kacho",jumpCooldown:65}
@@ -166,7 +165,6 @@ const levels={
   {x:3990,y:345,w:85,baseY:345,range:70,speed:.06,phase:6},
   {x:4580,y:330,w:85,baseY:330,range:75,speed:.062,phase:7}
  ],
- // 飛ぶ電池のような電気ギミックは削除
  hazards:[],
  vents:[]
 },
@@ -241,7 +239,7 @@ const levels={
 function loadStage(n){
  const d=levels[n];stage=n;WORLD=d.world;
  shacho=null;shachoAppeared=false;shachoTimer=0;
- energyDrink=n===4?{x:145,y:382,taken:false}:null;
+ energyDrink=(n===4&&!stage4EnergyUsed)?{x:145,y:382,taken:false}:null;
  ground=d.ground.map(([x,w])=>({x,y:FLOOR,w}));
  holes=d.holes.map(([x,w])=>({x,w}));
  platforms=[...ground,...d.platforms.map(([x,y,w])=>({x,y,w}))];
@@ -412,7 +410,6 @@ function drawProps(){
 function drawEnergyDrink(){
  if(!energyDrink||energyDrink.taken)return;
  const x=energyDrink.x-camera,y=energyDrink.y;
- // 赤いエナジードリンク缶
  rect(x-10,y-22,20,34,"#d92735");
  rect(x-7,y-26,14,5,"#bfc7cf");
  rect(x-8,y-18,16,5,"#fff0d0");
@@ -487,7 +484,6 @@ function drawKacho(b){
 }
 function drawBucho(b){
  const sx=b.x-camera,y=b.y;
- // 飛行する部長：大きなスーツと金色の肩章
  ctx.save();ctx.translate(sx+25,y+30);ctx.rotate(Math.sin(frame*.12)*.12);
  rect(-18,-8,36,34,"#4b2638");rect(-5,-7,10,31,"#f1e5d2");
  rect(-5,-4,10,20,"#b52f37");rect(-13,20,10,13,"#292d3b");rect(4,20,10,13,"#292d3b");
@@ -505,7 +501,6 @@ function drawBucho(b){
 function drawShacho(){
  if(!shacho)return;
  const sx=shacho.x-camera,y=(shacho.y??(FLOOR-66));
- // 威圧感のある社長。白髪・黒スーツ・赤いネクタイ
  rect(sx+2,y+58,42,6,"#0004");rect(sx+7,y+43,11,17,"#252a35");rect(sx+29,y+43,11,17,"#252a35");
  rect(sx+3,y+57,19,6,"#111827");rect(sx+26,y+57,19,6,"#111827");
  rect(sx+3,y+19,43,29,"#171d2a");rect(sx+20,y+20,9,25,"#f5eee2");rect(sx+21,y+22,7,18,"#b51f32");
@@ -582,8 +577,6 @@ function hurt(){
  lives--;
  hud();
  if(lives<=0){endGame(false);return}
- // 敵や攻撃に当たったら、残機を1つ失って現在のステージ入口へ戻す。
- // 敵・社長・飛び道具・コイン・動く床もステージ開始時の状態に戻す。
  const keepLives=lives;
  loadStage(stage);
  resetPlayer();
@@ -608,7 +601,6 @@ function updateTeas(){
   if(player.inv<=0&&overlap(teaBox,playerBox)){
    hurt();
    if(state!=="playing")return;
-   // hurt() clears the projectile array when the player respawns.
    if(player.inv>0)return;
    teas.splice(i,1);
   }
@@ -623,7 +615,6 @@ function updateBoss(b,oldY){
   b.y=b.baseY+Math.sin(frame*.075+(b.phase||0))*b.rangeY;
   b.shotTimer--;
   if(b.shotTimer<=0&&Math.abs(player.x-b.x)<760){
-   // 8方向へ同時発射。近づくほど避けにくい部長の全方位攻撃
    for(let a=0;a<8;a++){
     const angle=a*Math.PI/4;
     teas.push({x:b.x+25,y:b.y+20,vx:Math.cos(angle)*3.35,vy:Math.sin(angle)*3.35,life:175,radial:true});
@@ -700,7 +691,6 @@ function updateBoss(b,oldY){
 
 function updateShacho(){
  if(stage!==5||state!=="playing")return;
- // 開始直後は登場せず、少し進むと画面後方から出現
  if(!shachoAppeared&&player.x>420){
   shachoAppeared=true;
   shacho={x:Math.max(0,player.x-430),speed:3.55,y:FLOOR-66,vy:0,jumpTimer:75};
@@ -708,9 +698,10 @@ function updateShacho(){
  }
  if(!shacho)return;
 
- // 社長も定期的にジャンプして追いかけてくる
  shacho.speed=Math.min(4.55,shacho.speed+.0010);
- shacho.x+=shacho.speed;
+ // プレイヤーを追い抜かないように後ろに留める
+ const maxX=Math.max(0,player.x-16);
+ shacho.x=Math.min(maxX,shacho.x+shacho.speed);
  if(shacho.y>=FLOOR-66){
   shacho.y=FLOOR-66;
   shacho.vy=0;
@@ -725,7 +716,6 @@ function updateShacho(){
   if(shacho.y>FLOOR-66){shacho.y=FLOOR-66;shacho.vy=0;}
  }
 
- // 怒号の音符弾は社長の前方へ高速で飛び、かなり遠くまで届く
  shachoTimer--;
  if(shachoTimer<=0&&shacho.x-camera>-100&&shacho.x-player.x<1900){
   teas.push({
@@ -768,14 +758,11 @@ function update(){
  player.onGround=false;
 
  if(player.vy>=0){
-  // 全ステージ共通：穴の真上では床に着地しない
   const playerCenter=player.x+player.w/2;
   const overHole=isInsideHole(playerCenter);
 
-  // 通常の足場・床の着地判定
   platforms.forEach(p=>{
    const isGround=ground.includes(p);
-   // 穴の上では床だけ着地不可。上段の通常足場は利用できる
    if(isGround&&overHole)return;
 
    const horizontal=isGround
@@ -787,7 +774,6 @@ function update(){
    }
   });
 
-  // 動く足場は通常通り乗れる
   movingPlatforms.forEach(p=>{
    const horizontal=player.x+player.w>p.x&&player.x<p.x+p.w;
    const crossed=oldY+player.h<=p.oldY+8&&player.y+player.h>=p.y;
@@ -806,7 +792,9 @@ function update(){
   const dx=player.x+player.w/2-energyDrink.x;
   const dy=player.y+player.h/2-energyDrink.y;
   if(Math.hypot(dx,dy)<38){
-   energyDrink.taken=true;lives++;score+=50;hud();
+   energyDrink.taken=true;
+   stage4EnergyUsed=true;
+   lives++;score+=50;hud();
   }
  }
 
@@ -869,7 +857,7 @@ function startStage(n){
  state="playing";hud();
  document.getElementById("overlay").style.display="none";
 }
-function startGame(){score=0;lives=3;startStage(1)}
+function startGame(){score=0;lives=3;stage4EnergyUsed=false;startStage(1)}
 
 window.addEventListener("keydown",e=>{
  if(["ArrowLeft","ArrowRight","ArrowUp"," ","KeyA","KeyD","KeyW"].includes(e.key))e.preventDefault();
