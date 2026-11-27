@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#172033">
+<title>サラリーマンの社畜脱出ゲーム</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#172033;color:#fff;font-family:system-ui,-apple-system,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+#gameWrap{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;background:#172033}
+canvas{display:block;width:min(100vw,177.78vh);height:min(56.25vw,100vh);image-rendering:pixelated;background:#d8edfa;border:3px solid #101827}
+#hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:min(94vw,900px);display:flex;justify-content:space-between;align-items:center;pointer-events:none;z-index:3;gap:8px}
+.hudBox{background:#172033e8;border:2px solid #fff;padding:6px 12px;border-radius:8px;font-weight:900;font-size:clamp(12px,2vw,18px);white-space:nowrap;text-shadow:1px 2px #000}
+#stageLabel{position:absolute;top:55px;left:50%;transform:translateX(-50%);background:#172033dd;border:2px solid white;border-radius:8px;padding:5px 14px;font-weight:900;font-size:14px;z-index:3;pointer-events:none}
+#controls{position:absolute;bottom:max(16px,env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:space-between;padding:0 20px;pointer-events:none;z-index:4}
+.controlGroup{display:flex;gap:12px;pointer-events:auto}
+.controlButton{width:68px;height:68px;border-radius:18px;border:3px solid #fff;background:#263b5de8;color:white;font-size:29px;font-weight:900;box-shadow:0 5px 0 #101827;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:none}
+.controlButton:active{transform:translateY(4px);box-shadow:0 1px 0 #101827}
+#jumpBtn{width:82px;height:82px;background:#d97724ef;font-size:18px}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0b1425c9;z-index:5;padding:20px}
+.panel{width:min(90vw,470px);max-height:90vh;overflow:auto;padding:28px 22px;text-align:center;background:#fff;color:#172033;border:5px solid #172033;border-radius:18px;box-shadow:8px 8px 0 #0008}
+.panel h1{font-size:clamp(25px,5vw,38px);margin:0 0 12px;line-height:1.35}
+.panel p{line-height:1.8;font-weight:700;margin:12px 0 20px}
+.mainBtn{border:0;border-radius:12px;background:#e97828;color:#fff;padding:14px 25px;font-size:19px;font-weight:900;box-shadow:0 5px 0 #9b4219;cursor:pointer;margin:5px}
+.mainBtn:active{transform:translateY(4px);box-shadow:0 1px 0 #9b4219}
+.subBtn{background:#34465e;box-shadow:0 5px 0 #172033}
+.small{font-size:12px;color:#667085;margin-top:18px}
+@media(min-width:800px){#controls{opacity:.82}}
+</style>
+</head>
+<body>
+<div id="gameWrap">
+<canvas id="game" width="960" height="540"></canvas>
+<div id="hud">
+ <div class="hudBox">⭐ SCORE <span id="score">0</span></div>
+ <div class="hudBox">🪙 <span id="coins">0</span></div>
+ <div class="hudBox">❤️ <span id="lives">3</span></div>
+</div>
+<div id="stageLabel">STAGE 1</div>
+<div id="controls">
+ <div class="controlGroup">
+  <button class="controlButton" id="leftBtn">◀</button>
+  <button class="controlButton" id="rightBtn">▶</button>
+ </div>
+ <div class="controlGroup">
+  <button class="controlButton" id="jumpBtn">JUMP</button>
+ </div>
+</div>
+<div id="overlay">
+ <div class="panel" id="panel">
+  <h1>サラリーマンの<br>社畜脱出ゲーム</h1>
+  <p>会社から脱出して自由を手に入れろ！<br>先輩は頭を踏んで撃退しよう。<br>穴に落ちないように気をつけて！</p>
+  <button class="mainBtn" id="startBtn">ゲームスタート！</button>
+  <div class="small">PC：← → または A D ／ スペースでジャンプ<br>スマホ：画面下のボタンで操作</div>
+ </div>
+</div>
+</div>
+
+<script>
+(()=>{
+"use strict";
+
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const W=960,H=540,FLOOR=440,GRAVITY=.62;
+const keys={left:false,right:false,jump:false};
+
+let state="title",stage=1,camera=0,score=0,coinCount=0,lives=3,frame=0,lastJump=false;
+let WORLD=4100,ground=[],platforms=[],holes=[],bosses=[],coins=[],props=[],teas=[],vents=[],movingPlatforms=[],hazards=[];
+
+const player={x:70,y:386,w:30,h:54,vx:0,vy:0,onGround:true,inv:0,face:1};
+
+const levels={
+1:{
+ name:"社畜オフィスから脱出！",world:4100,
+ ground:[[0,650],[750,1400],[1500,2150],[2250,2900],[3000,4100]],
+ holes:[[650,100],[1400,100],[2150,100],[2900,100]],
+ platforms:[[390,365,130],[900,350,150],[1180,370,130],[1650,350,150],[1900,375,130],[2450,350,150],[2700,370,130],[3200,355,160],[3500,370,140]],
+ bosses:[
+  {x:300,min:220,max:540,v:1.05,type:"senpai"},
+  {x:830,min:780,max:1080,v:1.25,type:"senpai"},
+  {x:1550,min:1530,max:1800,v:1.1,type:"senpai"},
+  {x:2350,min:2290,max:2600,v:1.35,type:"senpai"},
+  {x:3150,min:3050,max:3450,v:1.2,type:"senpai"}
+ ],
+ coins:[[180,385],[260,385],[420,310],[560,385],[820,385],[940,295],[1080,385],[1230,315],[1330,385],[1580,385],[1700,295],[1850,385],[2050,385],[2320,385],[2500,295],[2700,315],[2820,385],[3070,385],[3260,300],[3450,315],[3650,385],[3800,385],[3940,385]],
+ props:[[80,"box"],[560,"copier"],[1050,"desk"],[1330,"chair"],[1850,"box"],[2070,"copier"],[2600,"desk"],[2820,"chair"],[3370,"copier"],[3700,"desk"]],
+ moving:[],vents:[],hazards:[]
+},
+2:{
+ name:"4階から1階へ脱出！",world:4800,
+ ground:[[0,540],[650,1120],[1230,1740],[1850,2380],[2490,3020],[3130,3660],[3770,4290],[4400,4800]],
+ holes:[[540,110],[1120,110],[1740,110],[2380,110],[3020,110],[3660,110],[4290,110]],
+ platforms:[
+  [300,360,120],[740,330,130],[960,365,100],
+  [1330,325,130],[1560,360,100],
+  [1950,330,130],[2190,365,100],
+  [2580,325,130],[2820,355,100],
+  [3210,330,130],[3450,365,100],
+  [3850,325,130],[4080,355,100],
+  [4470,330,150],[4650,365,100]
+ ],
+ bosses:[
+  {x:240,min:180,max:450,v:1.3,type:"senpai"},
+  {x:780,min:700,max:1000,v:1.5,type:"senpai"},
+  {x:1450,min:1300,max:1630,v:1.4,type:"otsubone",shot:115},
+  {x:2020,min:1900,max:2290,v:1.55,type:"senpai"},
+  {x:2700,min:2550,max:2900,v:1.45,type:"otsubone",shot:105},
+  {x:3330,min:3190,max:3550,v:1.65,type:"senpai"},
+  {x:3970,min:3830,max:4170,v:1.6,type:"otsubone",shot:95},
+  {x:4510,min:4430,max:4700,v:1.7,type:"senpai"}
+ ],
+ coins:[[130,385],[340,305],[480,385],[700,385],[820,275],[1030,310],[1280,385],[1390,275],[1650,385],[1900,385],[2040,275],[2300,300],[2540,385],[2660,270],[2940,385],[3180,385],[3300,275],[3580,300],[3810,385],[3930,270],[4160,385],[4440,385],[4560,275],[4720,385]],
+ props:[[90,"box"],[450,"copier"],[900,"desk"],[1500,"chair"],[1800,"copier"],[2250,"box"],[2600,"desk"],[3100,"copier"],[3500,"chair"],[3900,"desk"],[4200,"copier"],[4600,"box"]],
+ moving:[
+  {x:550,y:350,w:90,baseY:350,range:55,speed:.045,phase:0},
+  {x:1160,y:335,w:90,baseY:335,range:65,speed:.05,phase:1},
+  {x:1790,y:345,w:90,baseY:345,range:60,speed:.048,phase:2},
+  {x:2430,y:335,w:90,baseY:335,range:70,speed:.052,phase:3},
+  {x:3070,y:345,w:90,baseY:345,range:60,speed:.05,phase:4},
+  {x:3710,y:335,w:90,baseY:335,range:65,speed:.047,phase:5},
+  {x:4330,y:345,w:90,baseY:345,range:55,speed:.05,phase:6}
+ ],
+ vents:[],hazards:[]
+},
+3:{
+ name:"課長フロアから脱出！",world:5500,
+ ground:[[0,480],[590,1050],[1160,1600],[1710,2200],[2310,2780],[2890,3370],[3480,3970],[4080,4560],[4670,5500]],
+ holes:[[480,110],[1050,110],[1600,110],[2200,110],[2780,110],[3370,110],[3970,110],[4560,110]],
+ platforms:[
+  [250,350,110],[680,315,120],[900,355,100],
+  [1250,320,120],[1450,350,100],
+  [1800,315,130],[2040,350,100],
+  [2400,310,130],[2630,350,100],
+  [3000,315,120],[3240,350,100],
+  [3590,310,130],[3830,350,100],
+  [4190,310,120],[4420,350,100],
+  [4780,310,140],[5050,345,110]
+ ],
+ bosses:[
+  {x:190,min:130,max:400,v:1.35,type:"senpai"},
+  {x:760,min:650,max:980,v:1.55,type:"otsubone",shot:110},
+  {x:1330,min:1210,max:1530,v:1.7,type:"senpai"},
+  {x:1900,min:1770,max:2110,v:1.65,type:"otsubone",shot:95},
+  {x:2500,min:2370,max:2700,v:1.8,type:"senpai"},
+  {x:3100,min:2960,max:3300,v:1.75,type:"otsubone",shot:90},
+  {x:3700,min:3560,max:3900,v:1.9,type:"senpai"},
+  {x:4300,min:4160,max:4490,v:1.8,type:"otsubone",shot:85},
+  // 課長は合計3体
+  {x:2200,min:2280,max:2690,v:1.8,type:"kacho",jumpCooldown:85},
+  {x:3800,min:3540,max:3920,v:1.9,type:"kacho",jumpCooldown:75},
+  {x:4900,min:4740,max:5200,v:1.65,type:"kacho",jumpCooldown:65}
+ ],
+ coins:[[120,385],[300,290],[430,385],[650,385],[760,260],[970,300],[1190,385],[1330,265],[1530,385],[1750,385],[1900,255],[2140,300],[2350,385],[2500,255],[2740,385],[2950,385],[3100,260],[3340,300],[3510,385],[3700,250],[3940,385],[4140,385],[4300,250],[4540,300],[4700,385],[4900,250],[5200,385],[5380,385]],
+ props:[[80,"box"],[420,"copier"],[870,"desk"],[1280,"chair"],[1680,"copier"],[2140,"box"],[2600,"desk"],[3020,"copier"],[3450,"chair"],[3890,"desk"],[4300,"copier"],[4700,"box"],[5200,"desk"]],
+ moving:[
+  {x:490,y:345,w:85,baseY:345,range:65,speed:.055,phase:0},
+  {x:1080,y:330,w:85,baseY:330,range:70,speed:.06,phase:1},
+  {x:1630,y:345,w:85,baseY:345,range:65,speed:.057,phase:2},
+  {x:2230,y:330,w:85,baseY:330,range:75,speed:.062,phase:3},
+  {x:2810,y:345,w:85,baseY:345,range:70,speed:.06,phase:4},
+  {x:3400,y:330,w:85,baseY:330,range:75,speed:.062,phase:5},
+  {x:3990,y:345,w:85,baseY:345,range:70,speed:.06,phase:6},
+  {x:4580,y:330,w:85,baseY:330,range:75,speed:.062,phase:7}
+ ],
+ // 飛ぶ電池のような電気ギミックは削除
+ hazards:[],
+ vents:[]
+}
+};
+
+function loadStage(n){
+ const d=levels[n];stage=n;WORLD=d.world;
+ ground=d.ground.map(([x,w])=>({x,y:FLOOR,w}));
+ holes=d.holes.map(([x,w])=>({x,w}));
+ platforms=[...ground,...d.platforms.map(([x,y,w])=>({x,y,w}))];
+ bosses=d.bosses.map(b=>({...b,alive:true,shotTimer:b.shot||100,face:1,y:FLOOR-60,vy:0,jumping:false}));
+ coins=d.coins.map(([x,y])=>({x,y,r:11,taken:false}));
+ props=d.props.map(([x,type])=>({x,type}));
+ teas=[];
+ vents=[];
+ movingPlatforms=(d.moving||[]).map(p=>({...p,oldY:p.y}));
+ hazards=[];
+ document.getElementById("stageLabel").textContent="STAGE "+n+(n===2?" · 4F → 1F":n===3?" · 課長フロア":"");
+}
+
+function hud(){
+ document.getElementById("score").textContent=score;
+ document.getElementById("coins").textContent=coinCount;
+ document.getElementById("lives").textContent=lives;
+}
+function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
+function line(x1,y1,x2,y2,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function text(s,x,y,size,color="#222",align="left"){ctx.font=`bold ${size}px sans-serif`;ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(s,x,y)}
+
+function stage2FloorAt(x){
+ if(x<1200)return 4;
+ if(x<2400)return 3;
+ if(x<3600)return 2;
+ return 1;
+}
+
+function poster(x,y,w,h,heading,lines,color){
+ const sx=x-camera;rect(sx+5,y+5,w,h,"#756c5e");rect(sx,y,w,h,"#fffdf4");
+ rect(sx,y,w,25,color);text(heading,sx+w/2,y+18,12,"#fff","center");
+ lines.forEach((s,i)=>text(s,sx+w/2,y+58+i*25,15,"#333","center"));
+ rect(sx+8,y+h-10,w-16,3,"#ddd5c8");
+}
+function clock(x,y){
+ const sx=x-camera;ctx.fillStyle="#faf7e9";ctx.strokeStyle="#554c40";ctx.lineWidth=6;
+ ctx.beginPath();ctx.arc(sx,y,43,0,Math.PI*2);ctx.fill();ctx.stroke();
+ for(let i=0;i<12;i++){const a=i*Math.PI/6;line(sx+Math.sin(a)*34,y-Math.cos(a)*34,sx+Math.sin(a)*39,y-Math.cos(a)*39,"#554c40",2)}
+ line(sx,y,sx,y+25,"#332c26",4);
+ line(sx,y,sx+Math.sin(5.5/12*Math.PI*2)*19,y-Math.cos(5.5/12*Math.PI*2)*19,"#332c26",5);
+}
+function drawBackground(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ if(stage===1){
+  g.addColorStop(0,"#bfe7f8");g.addColorStop(1,"#eff7e7");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);rect(0,0,W,420,"#e8e2d2");
+  for(let wx=-camera%460;wx<W;wx+=460){
+   rect(wx+25,35,185,150,"#718e9b");rect(wx+32,42,171,136,"#b8e6f3");
+   line(wx+117,42,wx+117,178,"#6d8994",5);line(wx+32,110,wx+203,110,"#6d8994",5);
+   rect(wx+20,185,195,9,"#887d6c");
+  }
+  rect(0,205,W,9,"#c2b6a2");rect(0,214,W,7,"#f8f1e4");
+  poster(205,245,150,120,"社内目標",["売上第一"],"#426d8b");
+  poster(1120,270,170,120,"会社のお知らせ",["残業代は","もちろんサービス"],"#995449");
+  poster(2650,230,190,120,"勤務心得",["17時30分からが","本気のスタート"],"#557b55");
+  clock(900,125);
+ }else if(stage===2){
+  g.addColorStop(0,"#dce8f3");g.addColorStop(1,"#aebdca");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);rect(0,0,W,420,"#c9d2dc");
+  for(let wx=-camera%360;wx<W;wx+=360){
+   rect(wx+15,45,280,145,"#71899b");rect(wx+23,53,264,129,"#b7d7e4");
+   for(let ix=0;ix<5;ix++)for(let iy=0;iy<2;iy++){
+    rect(wx+32+ix*51,63+iy*54,38,42,"#718d9d");
+    rect(wx+36+ix*51,67+iy*54,30,34,"#d8e9ed");
+   }
+   rect(wx+10,190,290,10,"#687889");
+  }
+  rect(0,205,W,9,"#8997a5");rect(0,214,W,7,"#e6e9eb");
+  const floorNum=stage2FloorAt(camera+W/2);
+  rect(20,228,100,42,"#34495e");rect(25,233,90,32,"#eaf1f4");
+  text(floorNum+" F",70,256,23,"#34495e","center");
+  for(let x=450;x<W+250;x+=620){
+   const sx=x-(camera%620);rect(sx,275,100,8,"#8b9298");
+   for(let i=0;i<5;i++)rect(sx+8+i*17,283+i*12,20,7,"#8b9298");
+   rect(sx+3,265,4,25,"#65727d");rect(sx+91,265,4,25,"#65727d");
+  }
+  poster(220,245,150,115,"4階フロア",["出口は1階！"],"#456d91");
+  poster(1780,245,160,115,"階段はこちら",["下へ進め！"],"#557b55");
+  poster(3300,245,160,115,"1階まで",["あと少し！"],"#a45b43");
+ }else{
+  g.addColorStop(0,"#c9c8dc");g.addColorStop(1,"#777b91");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);rect(0,0,W,420,"#777b91");
+  for(let wx=-camera%300;wx<W;wx+=300){
+   rect(wx+12,38,265,155,"#333b55");rect(wx+20,46,249,139,"#596b83");
+   for(let i=0;i<4;i++){
+    rect(wx+30+i*60,58,42,112,"#b5cbd5");
+    rect(wx+34+i*60,62,34,104,"#d8e5e8");
+   }
+   rect(wx+8,193,273,12,"#31394d");
+  }
+  rect(0,205,W,10,"#424b61");rect(0,215,W,7,"#d3d5df");
+  poster(180,245,155,115,"課長室",["最後の関門！"],"#8d4352");
+  poster(2050,245,165,115,"社内通達",["課長に逆らうな"],"#5d4a81");
+  poster(3900,245,160,115,"最終フロア",["出口まであと少し"],"#8d4352");
+  rect(20,228,115,42,"#273149");rect(25,233,105,32,"#e8e4ee");
+  text("BOSS AREA",77,255,16,"#493b61","center");
+ }
+ rect(0,FLOOR,W,100,stage===1?"#a8a08c":stage===2?"#858d98":"#666b7c");
+ rect(0,FLOOR,W,9,stage===1?"#766e60":stage===2?"#515b69":"#3e4557");
+ for(let x=-camera%48;x<W;x+=48){
+  line(x,FLOOR+15,x+20,FLOOR+15,stage===1?"#8d8574":"#555d6d",2);
+  line(x+24,FLOOR+38,x+44,FLOOR+38,stage===1?"#8d8574":"#555d6d",2);
+ }
+}
+function drawHole(){
+ holes.forEach(h=>{
+  const x=h.x-camera;
+  rect(x,FLOOR,h.w,100,"#111827");
+  rect(x,FLOOR,h.w,8,stage===1?"#4b443b":"#3c4653");
+ });
+}
+function drawPlatform(){
+ platforms.forEach(p=>{
+  if(ground.includes(p))return;
+  const x=p.x-camera;
+  rect(x,p.y,p.w,12,stage===1?"#775d45":stage===2?"#687989":"#625b79");
+  rect(x,p.y+12,p.w,5,"#3d4a57");
+  for(let i=0;i<p.w;i+=25)rect(x+i,p.y+3,12,3,"#b28b60");
+  rect(x+8,p.y+17,9,FLOOR-p.y-17,"#6b6670");
+  rect(x+p.w-17,p.y+17,9,FLOOR-p.y-17,"#6b6670");
+ });
+ movingPlatforms.forEach(p=>{
+  const x=p.x-camera;
+  rect(x,p.y,p.w,12,"#c08a42");rect(x,p.y+12,p.w,5,"#795326");
+  rect(x+8,p.y+3,p.w-16,3,"#ffe0a0");
+  text("MOVE",x+p.w/2,p.y-7,10,"#76501f","center");
+ });
+}
+function drawProps(){
+ props.forEach(p=>{
+  const x=p.x-camera;if(x<-100||x>W+100)return;
+  if(p.type==="box"){
+   rect(x,390,42,48,"#b9854b");rect(x+3,394,36,40,"#d6a76c");
+   line(x+20,394,x+20,434,"#9b6b39",2);line(x+3,410,x+39,410,"#9b6b39",2);
+  }else if(p.type==="copier"){
+   rect(x,365,55,75,"#6e7c85");rect(x+5,372,45,18,"#d8e0e2");
+   rect(x+9,397,37,29,"#424e55");rect(x+14,402,27,3,"#b9c7cc");
+   rect(x+12,431,8,9,"#39434a");rect(x+37,431,8,9,"#39434a");
+  }else if(p.type==="desk"){
+   rect(x,395,90,10,"#805c3e");rect(x+5,405,8,35,"#64452f");
+   rect(x+77,405,8,35,"#64452f");rect(x+27,385,35,10,"#e7e5dc");
+  }else{
+   rect(x+10,385,28,8,"#485c73");rect(x+10,393,8,28,"#485c73");
+   rect(x+5,420,38,7,"#485c73");rect(x+21,427,5,13,"#485c73");
+  }
+ });
+}
+function drawCoins(){
+ coins.forEach(c=>{
+  if(c.taken)return;
+  const x=c.x-camera,pulse=Math.sin(frame*.12)*2;
+  ctx.fillStyle="#f7bd32";ctx.beginPath();ctx.ellipse(x,c.y,9,12+pulse,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#d28a18";ctx.lineWidth=2;ctx.stroke();
+  text("$",x,c.y+5,12,"#9a5a0a","center");
+ });
+}
+function drawPerson(x,y,face=1,isBoss=false){
+ const sx=x-camera;
+ rect(sx+4,y+49,24,5,"#0003");
+ rect(sx+7,y+39,7,13,"#26374d");rect(sx+19,y+39,7,13,"#26374d");
+ rect(sx+3,y+49,12,5,"#202a38");rect(sx+18,y+49,13,5,"#202a38");
+ rect(sx+4,y+20,25,23,isBoss?"#574c62":"#253d60");
+ rect(sx+14,y+21,5,19,"#e9e7df");rect(sx+14,y+23,5,14,"#b83d39");
+ rect(sx+12,y+15,9,7,"#efbd91");rect(sx+7,y+2,21,18,"#f1c49a");
+ rect(sx+6,y,22,6,"#302b2a");rect(sx+5,y+3,5,6,"#302b2a");
+ rect(sx+(face>0?21:9),y+9,3,3,"#252525");
+ rect(sx,y+23,6,17,"#253d60");rect(sx+28,y+23,6,17,"#253d60");
+ rect(sx-1,y+38,7,5,"#efbd91");rect(sx+28,y+38,7,5,"#efbd91");
+ if(isBoss){rect(sx+5,y-10,25,9,"#a63e3e");text("先輩",sx+17,y-13,12,"#a52c2c","center")}
+}
+function drawOtsubone(b){
+ const sx=b.x-camera,y=FLOOR-57;
+ rect(sx+3,y+51,30,5,"#0003");
+ rect(sx+5,y+30,25,19,"#5b3157");
+ rect(sx+10,y+44,7,9,"#343344");rect(sx+21,y+44,7,9,"#343344");
+ rect(sx+4,y+49,13,5,"#282536");rect(sx+19,y+49,13,5,"#282536");
+ rect(sx+4,y+19,27,19,"#b9b7c9");rect(sx+14,y+20,6,17,"#713f70");
+ rect(sx+13,y+14,9,7,"#eab88e");rect(sx+7,y+1,23,20,"#edc49f");
+ rect(sx+5,y-3,27,9,"#4a302b");rect(sx+4,y+1,7,22,"#4a302b");
+ rect(sx+27,y+2,7,20,"#4a302b");rect(sx+23,y-9,12,12,"#4a302b");
+ rect(sx+10,y+9,3,3,"#252020");rect(sx+23,y+9,3,3,"#252020");
+ line(sx+14,y+16,sx+23,y+16,"#9c3434",2);
+ rect(sx,y+23,6,15,"#b9b7c9");rect(sx+29,y+23,6,15,"#b9b7c9");
+ rect(sx-1,y+36,7,5,"#eab88e");rect(sx+29,y+36,7,5,"#eab88e");
+ rect(sx+32,y+32,10,10,"#d75d47");rect(sx+34,y+30,6,3,"#fff0d8");
+ text("お局",sx+18,y-14,12,"#b52d4b","center");
+}
+function drawKacho(b){
+ const sx=b.x-camera,y=b.y;
+ rect(sx+2,y+57,42,6,"#0004");
+ rect(sx+8,y+45,10,15,"#263247");rect(sx+27,y+45,10,15,"#263247");
+ rect(sx+4,y+57,17,5,"#171d2b");rect(sx+25,y+57,18,5,"#171d2b");
+ rect(sx+4,y+20,39,29,"#25334c");
+ rect(sx+20,y+21,7,25,"#e9e7df");
+ rect(sx+20,y+23,7,17,"#9b343d");
+ rect(sx+18,y+15,12,8,"#e5ad83");
+ rect(sx+10,y+1,29,20,"#edc49f");
+ rect(sx+8,y-2,33,8,"#302b2b");
+ rect(sx+9,y+1,6,8,"#302b2b");
+ rect(sx+31,y+2,8,5,"#302b2b");
+ rect(sx+16,y+9,4,3,"#252020");
+ rect(sx+30,y+9,4,3,"#252020");
+ line(sx+14,y+7,sx+21,y+6,"#302020",2);
+ line(sx+29,y+6,sx+36,y+7,"#302020",2);
+ rect(sx-1,y+23,7,18,"#25334c");
+ rect(sx+42,y+23,7,18,"#25334c");
+ rect(sx-2,y+39,8,5,"#e5ad83");
+ rect(sx+42,y+39,8,5,"#e5ad83");
+ rect(sx+29,y+31,4,3,"#e9d28b");
+ text("課長",sx+23,y-8,13,"#fff","center");
+ if(b.jumping)text("喝！！",sx+23,y-23,13,"#ffe08a","center");
+}
+function drawBosses(){
+ bosses.forEach(b=>{
+  if(!b.alive||b.x-camera<-80||b.x-camera>W+80)return;
+  if(b.type==="otsubone")drawOtsubone(b);
+  else if(b.type==="kacho")drawKacho(b);
+  else drawPerson(b.x,FLOOR-54,b.v>=0?1:-1,true);
+ });
+}
+function drawTeas(){
+ teas.forEach(t=>{
+  const x=t.x-camera;
+  ctx.fillStyle="#b95b24";ctx.beginPath();ctx.arc(x,t.y,9,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#f6c26b";ctx.beginPath();ctx.arc(x,t.y,5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#fff1c9";ctx.lineWidth=2;ctx.stroke();
+  text("♨",x,t.y-12,13,"#fff0d2","center");
+ });
+}
+function drawExit(){
+ const x=WORLD-80-camera;
+ rect(x,330,65,110,"#28764a");rect(x+8,338,49,102,"#45a96d");
+ rect(x+17,350,30,90,"#c5e9c9");rect(x+42,385,5,5,"#8d5b22");
+ text("EXIT",x+32,315,19,"#17613b","center");
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ drawBackground();drawPlatform();drawHole();drawProps();
+ drawCoins();drawBosses();drawTeas();drawExit();
+ if(player.inv>0&&Math.floor(frame/5)%2===0)return;
+ drawPerson(player.x,player.y,player.face,false);
+}
+
+function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function bossNear(x){return bosses.some(b=>b.alive&&Math.abs(b.x-x)<105)}
+function findSafeRespawnX(failedX){
+ const preferred=Math.max(45,failedX-180),candidates=[];
+ ground.forEach(g=>{
+  const left=g.x+55,right=g.x+g.w-65;
+  const x=Math.min(right,Math.max(left,preferred));
+  if(x<=failedX-35&&!bossNear(x))candidates.push({x,d:Math.abs(x-preferred)});
+ });
+ candidates.sort((a,b)=>a.d-b.d);
+ if(candidates.length)return candidates[0].x;
+ for(let i=ground.length-1;i>=0;i--){
+  const g=ground[i],x=Math.min(g.x+g.w-90,failedX-220);
+  if(x>=g.x+55&&!bossNear(x))return x;
+ }
+ return 55;
+}
+function hurt(){
+ if(player.inv>0||state!=="playing")return;
+ lives--;hud();
+ if(lives<=0){endGame(false);return}
+ const safeX=findSafeRespawnX(player.x);
+ player.x=safeX;player.y=FLOOR-player.h;
+ player.vx=0;player.vy=0;player.onGround=true;player.inv=120;
+ teas=[];
+ camera=Math.max(0,Math.min(WORLD-W,player.x-365));
+}
+function updateMovingPlatforms(){
+ movingPlatforms.forEach(p=>{
+  p.oldY=p.y;
+  p.y=p.baseY+Math.sin(frame*p.speed+p.phase)*p.range;
+ });
+}
+function updateTeas(){
+ for(let i=teas.length-1;i>=0;i--){
+  const t=teas[i];
+  t.x+=t.vx;t.y+=t.vy;t.vy+=.12;t.life--;
+  if(t.life<=0||t.x<camera-100||t.x>camera+W+100){teas.splice(i,1);continue}
+  const teaBox={x:t.x-8,y:t.y-8,w:16,h:16};
+  const playerBox={x:player.x+3,y:player.y+3,w:player.w-6,h:player.h-6};
+  if(overlap(teaBox,playerBox)){hurt();teas.splice(i,1)}
+ }
+}
+function updateBoss(b,oldY){
+ if(!b.alive)return;
+ if(b.type==="kacho"){
+  if(!b.jumping){
+   b.x+=b.v;
+   if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
+   if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
+   b.jumpCooldown--;
+   if(b.jumpCooldown<=0&&Math.abs(player.x-b.x)<650){
+    b.jumping=true;
+    b.vy=-12.5;
+    b.jumpVx=player.x<b.x?-2.8:2.8;
+    b.jumpCooldown=105;
+   }
+  }else{
+   b.x+=b.jumpVx;
+   b.vy+=.48;
+   b.y+=b.vy;
+   if(b.x<b.min)b.x=b.min;
+   if(b.x>b.max)b.x=b.max;
+   if(b.y>=FLOOR-60){
+    b.y=FLOOR-60;b.vy=0;b.jumping=false;
+   }
+  }
+  const enemy={x:b.x,y:b.y,w:46,h:62};
+  const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
+  if(overlap(box,enemy)){
+   if(player.vy>0&&oldY+player.h<=enemy.y+25){
+    b.alive=false;player.y=enemy.y-player.h;player.vy=-9;
+    player.onGround=false;score+=100;hud();
+   }else hurt();
+  }
+  return;
+ }
+
+ b.x+=b.v;
+ if(b.x>b.max){b.x=b.max;b.v=-Math.abs(b.v)}
+ if(b.x<b.min){b.x=b.min;b.v=Math.abs(b.v)}
+
+ if(b.type==="otsubone"){
+  b.shotTimer--;
+  if(b.shotTimer<=0&&Math.abs(player.x-b.x)<620){
+   const dir=player.x<b.x?-1:1;
+   teas.push({x:b.x+15,y:FLOOR-42,vx:dir*(stage===2?4.1:4.4),vy:-1.5,life:150});
+   b.shotTimer=b.shot||110;
+  }
+ }
+
+ const enemy=b.type==="otsubone"
+  ?{x:b.x,y:FLOOR-66,w:42,h:66}
+  :{x:b.x+2,y:FLOOR-57,w:32,h:57};
+ const box={x:player.x+3,y:player.y+2,w:player.w-6,h:player.h-2};
+ if(overlap(box,enemy)){
+  if(player.vy>0&&oldY+player.h<=enemy.y+24){
+   b.alive=false;player.y=enemy.y-player.h;
+   player.vy=-8;player.onGround=false;score+=30;hud();
+  }else hurt();
+ }
+}
+
+function isInsideHole(x){
+ return holes.some(h=>x>=h.x&&x<=h.x+h.w);
+}
+
+function update(){
+ if(state!=="playing")return;
+ frame++;
+ updateMovingPlatforms();
+
+ const speed=stage===1?3.6:stage===2?3.85:4;
+ if(keys.left){player.vx=-speed;player.face=-1}
+ else if(keys.right){player.vx=speed;player.face=1}
+ else player.vx*=.72;
+
+ player.x+=player.vx;
+ player.x=Math.max(0,Math.min(WORLD-player.w,player.x));
+
+ if(keys.jump&&!lastJump&&player.onGround){
+  player.vy=-12.2;player.onGround=false;
+ }
+ lastJump=keys.jump;
+
+ const oldY=player.y;
+ player.vy+=GRAVITY;
+ player.y+=player.vy;
+ player.onGround=false;
+
+ if(player.vy>=0){
+  // 全ステージ共通：穴の真上では床に着地しない
+  const playerCenter=player.x+player.w/2;
+  const overHole=isInsideHole(playerCenter);
+
+  // 通常の足場・床の着地判定
+  platforms.forEach(p=>{
+   const isGround=ground.includes(p);
+   // 穴の上では床だけ着地不可。上段の通常足場は利用できる
+   if(isGround&&overHole)return;
+
+   const horizontal=isGround
+    ?playerCenter>=p.x&&playerCenter<=p.x+p.w
+    :player.x+player.w>p.x&&player.x<p.x+p.w;
+   const crossed=oldY+player.h<=p.y+5&&player.y+player.h>=p.y;
+   if(horizontal&&crossed){
+    player.y=p.y-player.h;player.vy=0;player.onGround=true;
+   }
+  });
+
+  // 動く足場は通常通り乗れる
+  movingPlatforms.forEach(p=>{
+   const horizontal=player.x+player.w>p.x&&player.x<p.x+p.w;
+   const crossed=oldY+player.h<=p.oldY+8&&player.y+player.h>=p.y;
+   if(horizontal&&crossed){
+    player.y=p.y-player.h;player.vy=0;player.onGround=true;
+   }
+  });
+ }
+
+ coins.forEach(c=>{
+  if(c.taken)return;
+  const dx=player.x+player.w/2-c.x,dy=player.y+player.h/2-c.y;
+  if(Math.hypot(dx,dy)<30){c.taken=true;coinCount++;score+=10;hud()}
+ });
+
+ bosses.forEach(b=>updateBoss(b,oldY));
+ updateTeas();
+
+ if(player.y>H+40)hurt();
+
+ camera=Math.max(0,Math.min(WORLD-W,player.x-365));
+ if(player.inv>0)player.inv--;
+
+ if(player.x>WORLD-120)endGame(true);
+}
+
+function showPanel(html){
+ document.getElementById("panel").innerHTML=html;
+ document.getElementById("overlay").style.display="flex";
+}
+function endGame(cleared){
+ state=cleared?"clear":"over";
+ if(!cleared){
+  showPanel(`<h1>ゲームオーバー！</h1><p>会社から脱出できなかった…<br><br>スコア：${score}<br>コイン：${coinCount}枚</p><button class="mainBtn" id="retryBtn">もう一度挑戦！</button>`);
+  document.getElementById("retryBtn").onclick=()=>startStage(stage);
+  return;
+ }
+ if(stage===1){
+  showPanel(`<h1>STAGE 1 CLEAR！</h1><p>オフィスから脱出成功！<br>しかし、まだ自由ではない……。<br><br>次は4階から1階へ脱出だ！</p><button class="mainBtn" id="nextBtn">ステージ2へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ1をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  document.getElementById("nextBtn").onclick=()=>startStage(2);
+  document.getElementById("againBtn").onclick=()=>startStage(1);
+ }else if(stage===2){
+  showPanel(`<h1>STAGE 2 CLEAR！</h1><p>4階から1階まで脱出成功！<br>しかし、最後に待ち受けるのは課長だ……。<br><br>次は課長フロアへ！</p><button class="mainBtn" id="nextBtn">ステージ3へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ2をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  document.getElementById("nextBtn").onclick=()=>startStage(3);
+  document.getElementById("againBtn").onclick=()=>startStage(2);
+ }else{
+  showPanel(`<h1>ALL STAGE CLEAR！！</h1><p>課長3人まで突破して脱出成功！<br>先輩もお局さんも課長も撃退！<br>ついに自由を手に入れた！！<br><br>最終スコア：${score}<br>コイン：${coinCount}枚</p><button class="mainBtn" id="againBtn">最初から遊ぶ！</button><div class="small">全ステージクリアおめでとう！</div>`);
+  document.getElementById("againBtn").onclick=()=>startStage(1);
+ }
+}
+function resetPlayer(){
+ player.x=70;player.y=FLOOR-player.h;player.vx=0;player.vy=0;
+ player.onGround=true;player.inv=0;player.face=1;
+ camera=0;frame=0;lastJump=false;
+ keys.left=keys.right=keys.jump=false;
+}
+function startStage(n){
+ loadStage(n);resetPlayer();lives=3;coinCount=0;
+ state="playing";hud();
+ document.getElementById("overlay").style.display="none";
+}
+function startGame(){score=0;startStage(1)}
+
+window.addEventListener("keydown",e=>{
+ if(["ArrowLeft","ArrowRight","ArrowUp"," ","KeyA","KeyD","KeyW"].includes(e.key))e.preventDefault();
+ if(e.key==="ArrowLeft"||e.key==="KeyA")keys.left=true;
+ if(e.key==="ArrowRight"||e.key==="KeyD")keys.right=true;
+ if(e.key===" "||e.key==="ArrowUp"||e.key==="KeyW")keys.jump=true;
+});
+window.addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft"||e.key==="KeyA")keys.left=false;
+ if(e.key==="ArrowRight"||e.key==="KeyD")keys.right=false;
+ if(e.key===" "||e.key==="ArrowUp"||e.key==="KeyW")keys.jump=false;
+});
+function bindButton(id,key){
+ const el=document.getElementById(id);
+ const down=e=>{e.preventDefault();keys[key]=true};
+ const up=e=>{e.preventDefault();keys[key]=false};
+ el.addEventListener("pointerdown",down);
+ el.addEventListener("pointerup",up);
+ el.addEventListener("pointercancel",up);
+ el.addEventListener("lostpointercapture",up);
+ el.addEventListener("touchstart",down,{passive:false});
+ el.addEventListener("touchend",up,{passive:false});
+ el.addEventListener("touchcancel",up,{passive:false});
+ el.addEventListener("contextmenu",e=>e.preventDefault());
+}
+bindButton("leftBtn","left");
+bindButton("rightBtn","right");
+bindButton("jumpBtn","jump");
+document.getElementById("startBtn").addEventListener("click",startGame);
+
+loadStage(1);hud();
+function loop(){update();draw();requestAnimationFrame(loop)}
+draw();loop();
+})();
+</script>
+</body>
+</html>
