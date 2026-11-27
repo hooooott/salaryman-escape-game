@@ -238,12 +238,6 @@ function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math
 function line(x1,y1,x2,y2,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
 function text(s,x,y,size,color="#222",align="left"){ctx.font=`bold ${size}px sans-serif`;ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(s,x,y)}
 
-function stage2FloorAt(x){
- if(x<1200)return 4;
- if(x<2400)return 3;
- if(x<3600)return 2;
- return 1;
-}
 
 function poster(x,y,w,h,heading,lines,color){
  const sx=x-camera;rect(sx+5,y+5,w,h,"#756c5e");rect(sx,y,w,h,"#fffdf4");
@@ -285,17 +279,16 @@ function drawBackground(){
    rect(wx+10,190,290,10,"#687889");
   }
   rect(0,205,W,9,"#8997a5");rect(0,214,W,7,"#e6e9eb");
-  const floorNum=stage2FloorAt(camera+W/2);
   rect(20,228,100,42,"#34495e");rect(25,233,90,32,"#eaf1f4");
-  text(floorNum+" F",70,256,23,"#34495e","center");
+  text("OFFICE",70,255,17,"#34495e","center");
   for(let x=450;x<W+250;x+=620){
    const sx=x-(camera%620);rect(sx,275,100,8,"#8b9298");
    for(let i=0;i<5;i++)rect(sx+8+i*17,283+i*12,20,7,"#8b9298");
    rect(sx+3,265,4,25,"#65727d");rect(sx+91,265,4,25,"#65727d");
   }
-  poster(220,245,150,115,"4階フロア",["出口は1階！"],"#456d91");
+  poster(220,245,150,115,"社内案内",["出口を目指せ！"],"#456d91");
   poster(1780,245,160,115,"階段はこちら",["下へ進め！"],"#557b55");
-  poster(3300,245,160,115,"1階まで",["あと少し！"],"#a45b43");
+  poster(3300,245,160,115,"脱出案内",["あと少し！"],"#a45b43");
  }else if(stage===3){
   g.addColorStop(0,"#c9c8dc");g.addColorStop(1,"#777b91");
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);rect(0,0,W,420,"#777b91");
@@ -312,7 +305,7 @@ function drawBackground(){
   poster(2050,245,165,115,"社内通達",["課長に逆らうな"],"#5d4a81");
   poster(3900,245,160,115,"最終フロア",["出口まであと少し"],"#8d4352");
   rect(20,228,115,42,"#273149");rect(25,233,105,32,"#e8e4ee");
-  text("BOSS AREA",77,255,16,"#493b61","center");
+  text("OFFICE",77,255,16,"#493b61","center");
  }else{
   g.addColorStop(0,"#f3d7a5");g.addColorStop(1,"#a85e45");
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);rect(0,0,W,420,"#765044");
@@ -326,7 +319,7 @@ function drawBackground(){
   poster(2500,245,175,115,"緊急通達",["部長に見つかるな"],"#784b2d");
   poster(4700,245,175,115,"最終出口",["右奥まで走れ！"],"#a33d32");
   rect(20,228,115,42,"#492d36");rect(25,233,105,32,"#f7e6cf");
-  text("EXECUTIVE",77,255,15,"#713a32","center");
+  text("OFFICE",77,255,15,"#713a32","center");
  }
  rect(0,FLOOR, W,100,stage===1?"#a8a08c":stage===2?"#858d98":stage===3?"#666b7c":"#8b6251");
  rect(0,FLOOR,W,9,stage===1?"#766e60":stage===2?"#515b69":stage===3?"#3e4557":"#563b34");
@@ -719,19 +712,19 @@ function endGame(cleared){
   return;
  }
  if(stage===1){
-  showPanel(`<h1>STAGE 1 CLEAR！</h1><p>オフィスから脱出成功！<br>しかし、まだ自由ではない……。<br><br>次は4階から1階へ脱出だ！</p><button class="mainBtn" id="nextBtn">ステージ2へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ1をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 1 CLEAR！</h1><p>オフィスから脱出成功！<br>しかし、まだ自由ではない……。<br><br>次のエリアへ進もう！</p><button class="mainBtn" id="nextBtn">ステージ2へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ1をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(2);
   document.getElementById("againBtn").onclick=()=>startStage(1);
  }else if(stage===2){
-  showPanel(`<h1>STAGE 2 CLEAR！</h1><p>4階から1階まで脱出成功！<br>しかし、最後に待ち受けるのは課長だ……。<br><br>次は課長フロアへ！</p><button class="mainBtn" id="nextBtn">ステージ3へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ2をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 2 CLEAR！</h1><p>エリアを突破！<br>しかし、最後に待ち受けるのは課長だ……。<br><br>次は課長との対決だ！</p><button class="mainBtn" id="nextBtn">ステージ3へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ2をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(3);
   document.getElementById("againBtn").onclick=()=>startStage(2);
  }else if(stage===3){
-  showPanel(`<h1>STAGE 3 CLEAR！</h1><p>課長フロアを突破！<br>だが最上階には部長が待ち受けている……。<br><br>最難関ステージ4へ！</p><button class="mainBtn" id="nextBtn">ステージ4へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ3をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 3 CLEAR！</h1><p>課長を撃退！<br>だが最後には部長が待ち受けている……。<br><br>最難関ステージ4へ！</p><button class="mainBtn" id="nextBtn">ステージ4へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ3をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(4);
   document.getElementById("againBtn").onclick=()=>startStage(3);
  }else{
-  showPanel(`<h1>ALL STAGE CLEAR！！</h1><p>最難関の部長フロアを突破！<br>先輩・お局さん・課長・部長を全員撃退！<br>ついに会社から完全脱出！！<br><br>最終スコア：${score}<br>コイン：${coinCount}枚</p><button class="mainBtn" id="againBtn">最初から遊ぶ！</button><div class="small">全4ステージクリアおめでとう！</div>`);
+  showPanel(`<h1>ALL STAGE CLEAR！！</h1><p>最難関のステージを突破！<br>先輩・お局さん・課長・部長を全員撃退！<br>ついに会社から完全脱出！！<br><br>最終スコア：${score}<br>コイン：${coinCount}枚</p><button class="mainBtn" id="againBtn">最初から遊ぶ！</button><div class="small">全4ステージクリアおめでとう！</div>`);
   document.getElementById("againBtn").onclick=()=>startStage(1);
  }
 }
