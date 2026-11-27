@@ -69,7 +69,7 @@ const keys={left:false,right:false,jump:false};
 
 let state="title",stage=1,camera=0,score=0,coinCount=0,lives=3,frame=0,lastJump=false;
 let WORLD=4100,ground=[],platforms=[],holes=[],bosses=[],coins=[],props=[],teas=[],vents=[],movingPlatforms=[],hazards=[];
-let shacho=null,shachoAppeared=false,shachoTimer=0;
+let shacho=null,shachoAppeared=false,shachoTimer=0,energyDrink=null;
 
 const player={x:70,y:386,w:30,h:54,vx:0,vy:0,onGround:true,inv:0,face:1};
 
@@ -171,7 +171,7 @@ const levels={
  vents:[]
 },
 4:{
- name:"部長フロアから最終脱出！",world:6500,
+ name:"部長フロアを突破せよ！",world:6500,
  ground:[[0,430],[550,980],[1100,1510],[1640,2040],[2170,2570],[2700,3100],[3230,3650],[3780,4180],[4310,4720],[4850,5270],[5400,6500]],
  holes:[[430,120],[980,120],[1510,130],[2040,130],[2570,130],[3100,130],[3650,130],[4180,130],[4720,130],[5270,130]],
  platforms:[
@@ -228,7 +228,6 @@ const levels={
   {x:520,y:325,w:76,baseY:325,range:75,speed:.078,phase:0},
   {x:1085,y:300,w:76,baseY:300,range:82,speed:.082,phase:1},
   {x:1595,y:315,w:76,baseY:315,range:80,speed:.08,phase:2},
-
   {x:2075,y:290,w:76,baseY:290,range:85,speed:.084,phase:3},
   {x:2535,y:305,w:76,baseY:305,range:82,speed:.083,phase:4},
   {x:2995,y:280,w:76,baseY:280,range:88,speed:.086,phase:5},
@@ -242,6 +241,7 @@ const levels={
 function loadStage(n){
  const d=levels[n];stage=n;WORLD=d.world;
  shacho=null;shachoAppeared=false;shachoTimer=0;
+ energyDrink=n===4?{x:145,y:382,taken:false}:null;
  ground=d.ground.map(([x,w])=>({x,y:FLOOR,w}));
  holes=d.holes.map(([x,w])=>({x,w}));
  platforms=[...ground,...d.platforms.map(([x,y,w])=>({x,y,w}))];
@@ -263,6 +263,7 @@ function hud(){
 function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
 function line(x1,y1,x2,y2,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
 function text(s,x,y,size,color="#222",align="left"){ctx.font=`bold ${size}px sans-serif`;ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(s,x,y)}
+
 
 function poster(x,y,w,h,heading,lines,color){
  const sx=x-camera;rect(sx+5,y+5,w,h,"#756c5e");rect(sx,y,w,h,"#fffdf4");
@@ -326,9 +327,9 @@ function drawBackground(){
    rect(wx+8,193,273,12,"#31394d");
   }
   rect(0,205,W,10,"#424b61");rect(0,215,W,7,"#d3d5df");
-  poster(180,245,155,115,"課長室",["最後の関門！"],"#8d4352");
+  poster(180,245,155,115,"課長室",["課長に注意！"],"#8d4352");
   poster(2050,245,165,115,"社内通達",["課長に逆らうな"],"#5d4a81");
-  poster(3900,245,160,115,"最終フロア",["出口まであと少し"],"#8d4352");
+  poster(3900,245,160,115,"部長フロア",["出口まであと少し"],"#8d4352");
   rect(20,228,115,42,"#273149");rect(25,233,105,32,"#e8e4ee");
   text("OFFICE",77,255,16,"#493b61","center");
  }else if(stage===4){
@@ -342,7 +343,7 @@ function drawBackground(){
   rect(0,205,W,10,"#4b3036");rect(0,215,W,7,"#e7c79d");
   poster(170,245,170,115,"部長フロア",["四方八方から攻撃！"],"#a33d32");
   poster(2500,245,175,115,"緊急通達",["部長に見つかるな"],"#784b2d");
-  poster(4700,245,175,115,"最終出口",["右奥まで走れ！"],"#a33d32");
+  poster(4700,245,175,115,"出口",["右奥まで走れ！"],"#a33d32");
   rect(20,228,115,42,"#492d36");rect(25,233,105,32,"#f7e6cf");
   text("OFFICE",77,255,15,"#713a32","center");
  }else{
@@ -389,7 +390,6 @@ function drawPlatform(){
   text("MOVE",x+p.w/2,p.y-7,10,"#76501f","center");
  });
 }
-
 function drawProps(){
  props.forEach(p=>{
   const x=p.x-camera;if(x<-100||x>W+100)return;
@@ -408,6 +408,17 @@ function drawProps(){
    rect(x+5,420,38,7,"#485c73");rect(x+21,427,5,13,"#485c73");
   }
  });
+}
+function drawEnergyDrink(){
+ if(!energyDrink||energyDrink.taken)return;
+ const x=energyDrink.x-camera,y=energyDrink.y;
+ // 赤いエナジードリンク缶
+ rect(x-10,y-22,20,34,"#d92735");
+ rect(x-7,y-26,14,5,"#bfc7cf");
+ rect(x-8,y-18,16,5,"#fff0d0");
+ rect(x-8,y+4,16,4,"#8d1825");
+ text("E",x,y+1,15,"#fff","center");
+ text("ENERGY",x,y+24,9,"#fff4c2","center");
 }
 function drawCoins(){
  coins.forEach(c=>{
@@ -496,6 +507,7 @@ function drawShacho(){
  const sx=shacho.x-camera,y=(shacho.y??(FLOOR-66));
  // 威圧感のある社長。白髪・黒スーツ・赤いネクタイ
  rect(sx+2,y+58,42,6,"#0004");rect(sx+7,y+43,11,17,"#252a35");rect(sx+29,y+43,11,17,"#252a35");
+ rect(sx+3,y+57,19,6,"#111827");rect(sx+26,y+57,19,6,"#111827");
  rect(sx+3,y+19,43,29,"#171d2a");rect(sx+20,y+20,9,25,"#f5eee2");rect(sx+21,y+22,7,18,"#b51f32");
  rect(sx+17,y+13,14,9,"#e5ad83");rect(sx+10,y-2,30,22,"#edc49f");
  rect(sx+7,y-6,36,10,"#d8d5d0");rect(sx+9,y-3,7,7,"#b6b3b0");rect(sx+34,y-3,7,7,"#b6b3b0");
@@ -543,7 +555,7 @@ function drawExit(){
 function draw(){
  ctx.clearRect(0,0,W,H);
  drawBackground();drawPlatform();drawHole();drawProps();
- drawCoins();drawBosses();drawTeas();drawShacho();drawShachoNotes();drawExit();
+ drawEnergyDrink();drawCoins();drawBosses();drawTeas();drawShacho();drawShachoNotes();drawExit();
  if(player.inv>0&&Math.floor(frame/5)%2===0)return;
  drawPerson(player.x,player.y,player.face,false);
 }
@@ -602,7 +614,6 @@ function updateTeas(){
   }
  }
 }
-
 function updateBoss(b,oldY){
  if(!b.alive)return;
  if(b.type==="bucho"){
@@ -791,6 +802,13 @@ function update(){
   const dx=player.x+player.w/2-c.x,dy=player.y+player.h/2-c.y;
   if(Math.hypot(dx,dy)<30){c.taken=true;coinCount++;score+=10;hud()}
  });
+ if(energyDrink&&!energyDrink.taken){
+  const dx=player.x+player.w/2-energyDrink.x;
+  const dy=player.y+player.h/2-energyDrink.y;
+  if(Math.hypot(dx,dy)<38){
+   energyDrink.taken=true;lives++;score+=50;hud();
+  }
+ }
 
  bosses.forEach(b=>{if(state==="playing")updateBoss(b,oldY)});
  if(state!=="playing")return;
@@ -824,11 +842,11 @@ function endGame(cleared){
   document.getElementById("nextBtn").onclick=()=>startStage(2);
   document.getElementById("againBtn").onclick=()=>startStage(1);
  }else if(stage===2){
-  showPanel(`<h1>STAGE 2 CLEAR！</h1><p>エリアを突破！<br>しかし、最後に待ち受けるのは課長だ……。<br><br>次は課長との対決だ！</p><button class="mainBtn" id="nextBtn">ステージ3へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ2をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 2 CLEAR！</h1><p>エリアを突破！<br>次に待ち受けるのは課長だ……。<br><br>次は課長との対決だ！</p><button class="mainBtn" id="nextBtn">ステージ3へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ2をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(3);
   document.getElementById("againBtn").onclick=()=>startStage(2);
  }else if(stage===3){
-  showPanel(`<h1>STAGE 3 CLEAR！</h1><p>課長を撃退！<br>だが最後には部長が待ち受けている……。<br><br>最難関ステージ4へ！</p><button class="mainBtn" id="nextBtn">ステージ4へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ3をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 3 CLEAR！</h1><p>課長を撃退！<br>次は部長が待ち受けるステージ4へ！</p><button class="mainBtn" id="nextBtn">ステージ4へ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ3をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(4);
   document.getElementById("againBtn").onclick=()=>startStage(3);
  }else if(stage===4){
@@ -837,7 +855,7 @@ function endGame(cleared){
   document.getElementById("againBtn").onclick=()=>startStage(4);
  }else{
   showPanel(`<h1>完全脱出！！</h1><p>社長から逃げ切った！！<br>ついに会社の外へ脱出成功！！<br>今日から自由だーー！！<br><br>最終スコア：${score}<br>コイン：${coinCount}枚</p><button class="mainBtn" id="againBtn">最初から遊ぶ！</button><div class="small">全5ステージクリアおめでとう！</div>`);
-  document.getElementById("againBtn").onclick=()=>startStage(1);
+  document.getElementById("againBtn").onclick=()=>startGame();
  }
 }
 function resetPlayer(){
@@ -847,11 +865,11 @@ function resetPlayer(){
  keys.left=keys.right=keys.jump=false;
 }
 function startStage(n){
- loadStage(n);resetPlayer();lives=3;coinCount=0;
+ loadStage(n);resetPlayer();coinCount=0;
  state="playing";hud();
  document.getElementById("overlay").style.display="none";
 }
-function startGame(){score=0;startStage(1)}
+function startGame(){score=0;lives=3;startStage(1)}
 
 window.addEventListener("keydown",e=>{
  if(["ArrowLeft","ArrowRight","ArrowUp"," ","KeyA","KeyD","KeyW"].includes(e.key))e.preventDefault();
