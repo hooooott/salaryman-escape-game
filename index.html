@@ -64,7 +64,7 @@ canvas{display:block;width:min(100vw,177.78vh);height:min(56.25vw,100vh);image-r
 
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
-const W=960,H=540,FLOOR=440,GRAVITY=.62;
+const W=canvas.width,H=canvas.height,FLOOR=440,GRAVITY=.62;
 const keys={left:false,right:false,jump:false};
 
 let state="title",stage=1,camera=0,score=0,coinCount=0,lives=3,frame=0,lastJump=false;
@@ -170,6 +170,7 @@ const levels={
  hazards:[],
  vents:[]
 },
+
 4:{
  name:"部長フロアから最終脱出！",world:6500,
  ground:[[0,430],[550,980],[1100,1510],[1640,2040],[2170,2570],[2700,3100],[3230,3650],[3780,4180],[4310,4720],[4850,5270],[5400,6500]],
@@ -218,6 +219,7 @@ const levels={
  ground:[[0,520],[650,1080],[1210,1590],[1720,2070],[2200,2530],[2660,2990],[3120,3440],[3570,3890],[4020,4700]],
  holes:[[520,130],[1080,130],[1590,130],[2070,130],[2530,130],[2990,130],[3440,130],[3890,130]],
  platforms:[[330,330,105],[560,295,95],[790,325,100],[1010,285,95],[1320,315,100],[1510,270,95],[1800,305,95],[1990,260,100],[2290,300,95],[2460,255,100],[2760,295,95],[2920,250,100],[3220,290,100],[3390,245,100],[3670,285,95],[3840,240,100],[4140,285,110],[4390,300,110]],
+ bosses:[],
  coins:[[130,385],[360,270],[600,250],[850,265],[1030,245],[1350,255],[1530,230],[1830,245],[2010,220],[2320,240],[2490,215],[2790,235],[2950,210],[3250,230],[3420,205],[3700,225],[3870,200],[4170,235],[4450,250],[4600,385]],
  props:[[100,"box"],[730,"copier"],[1260,"desk"],[1760,"chair"],[2240,"copier"],[2700,"box"],[3160,"desk"],[3610,"copier"],[4070,"chair"]],
  moving:[
@@ -230,7 +232,6 @@ const levels={
   {x:3445,y:300,w:76,baseY:300,range:85,speed:.085,phase:6},
   {x:3895,y:275,w:76,baseY:275,range:88,speed:.088,phase:7}
  ],vents:[],hazards:[]
-
 }
 };
 
@@ -361,6 +362,7 @@ function drawBackground(){
   line(x+24,FLOOR+38,x+44,FLOOR+38,stage===1?"#8d8574":"#555d6d",2);
  }
 }
+
 function drawHole(){
  holes.forEach(h=>{
   const x=h.x-camera;
@@ -385,7 +387,6 @@ function drawPlatform(){
   text("MOVE",x+p.w/2,p.y-7,10,"#76501f","center");
  });
 }
-
 function drawProps(){
  props.forEach(p=>{
   const x=p.x-camera;if(x<-100||x>W+100)return;
@@ -564,13 +565,18 @@ function findSafeRespawnX(failedX){
 }
 function hurt(){
  if(player.inv>0||state!=="playing")return;
- lives--;hud();
+ lives--;
+ hud();
  if(lives<=0){endGame(false);return}
- const safeX=findSafeRespawnX(player.x);
- player.x=safeX;player.y=FLOOR-player.h;
- player.vx=0;player.vy=0;player.onGround=true;player.inv=120;
- teas=[];
- camera=Math.max(0,Math.min(WORLD-W,player.x-365));
+ // 敵や攻撃に当たったら、残機を1つ失って現在のステージ入口へ戻す。
+ // 敵・社長・飛び道具・コイン・動く床もステージ開始時の状態に戻す。
+ const keepLives=lives;
+ loadStage(stage);
+ resetPlayer();
+ lives=keepLives;
+ coinCount=0;
+ hud();
+ player.inv=90;
 }
 function updateMovingPlatforms(){
  movingPlatforms.forEach(p=>{
@@ -594,7 +600,6 @@ function updateTeas(){
   }
  }
 }
-
 function updateBoss(b,oldY){
  if(!b.alive)return;
  if(b.type==="bucho"){
@@ -678,20 +683,23 @@ function updateBoss(b,oldY){
   }else hurt();
  }
 }
+
 function updateShacho(){
  if(stage!==5||state!=="playing")return;
  // 開始直後は登場せず、少し進むと画面後方から出現
- if(!shachoAppeared&&player.x>620){
-  shachoAppeared=true;shacho={x:Math.max(0,player.x-500),speed:3.9};
-  shachoTimer=45;
+ if(!shachoAppeared&&player.x>420){
+  // ステージ開始直後に社長が重ならないよう、少し進んだところで後方から登場
+  shachoAppeared=true;
+  shacho={x:Math.max(0,player.x-430),speed:3.55};
+  shachoTimer=55;
  }
  if(!shacho)return;
- shacho.speed=Math.min(4.65,shacho.speed+.0012);
+ shacho.speed=Math.min(4.55,shacho.speed+.0010);
  shacho.x+=shacho.speed;
  shachoTimer--;
  // 怒鳴り声の音符弾を連続発射。社長の前方＝右方向へ飛ぶ
  if(shachoTimer<=0&&shacho.x-camera>-100&&shacho.x-player.x<620){
-  teas.push({x:shacho.x+48,y:FLOOR-49,vx:5.1,vy:Math.sin(frame*.15)*-.35,life:145,note:true,spin:0});
+  teas.push({x:shacho.x+48,y:FLOOR-49,vx:4.7,vy:Math.sin(frame*.15)*-.35,life:145,note:true,spin:0});
   shachoTimer=42;
  }
  const enemy={x:shacho.x+2,y:FLOOR-66,w:48,h:66};
@@ -801,7 +809,7 @@ function endGame(cleared){
   document.getElementById("nextBtn").onclick=()=>startStage(4);
   document.getElementById("againBtn").onclick=()=>startStage(3);
  }else if(stage===4){
-  showPanel(`<h1>STAGE 4 CLEAR！</h1><p>部長フロアを突破！<br>しかし、最後に社長が待ち構えている……。<br><br>最終ステージへ！</p><button class="mainBtn" id="nextBtn">最終ステージへ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ4をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
+  showPanel(`<h1>STAGE 4 CLEAR！</h1><p>部長フロアを突破！<br>しかし、最後に社長が待ち構えている……。<br><br>最終ステージへ！<br>社長が後ろから追いかけてくるぞ！</p><button class="mainBtn" id="nextBtn">最終ステージへ進む！</button><br><button class="mainBtn subBtn" id="againBtn">ステージ4をもう一度</button><div class="small">スコア：${score} ／ コイン：${coinCount}枚</div>`);
   document.getElementById("nextBtn").onclick=()=>startStage(5);
   document.getElementById("againBtn").onclick=()=>startStage(4);
  }else{
